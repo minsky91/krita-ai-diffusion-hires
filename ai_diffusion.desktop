@@ -4,5 +4,5 @@ ServiceTypes=Krita/PythonPlugin
 X-KDE-Library=ai_diffusion
 X-Python-2-Compatible=false
 X-Krita-Manual=manual.html
-Name=AI Image Diffusion
+Name=AI Image Diffusion Hires
 Comment=Workflows supported by generative AI (Stable Diffusion)

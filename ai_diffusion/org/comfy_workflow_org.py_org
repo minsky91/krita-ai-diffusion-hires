@@ -10,22 +10,6 @@ from .image import Bounds, Extent, Image, ImageCollection
 from .resources import Arch, ControlMode
 from .util import base_type_match, client_logger as log
 
-# minsky91
-from .settings import settings
-from binascii import crc32
-
-# produce a unique CRC32-based id of an image (includes a simplified version of Image.to_array())
-def image_uid(image: Image):
-    #return id(image)    # the simplest one, but not good enough for the purpose
-    image.to_numpy_format()
-    w, h = image.extent
-    c = 4 if image.is_rgba else 1
-    bits = image._qimage.constBits()
-    return crc32(bits.asarray(w * h * c))    
-    #return id(image)
-
-# end of minsky91 additions
-
 
 class ComfyRunMode(Enum):
     runtime = 0  # runs as part of same process, transfer images in memory
@@ -768,8 +752,7 @@ class ComfyWorkflow:
     def vae_decode(self, vae: Output, latent_image: Output):
         return self.add("VAEDecode", 1, vae=vae, samples=latent_image)
 
-    # minsky91: modified name to avoid clashes with TiledDiffusion logic
-    def vae_decode_tiled_512(self, vae: Output, latent_image: Output):
+    def vae_decode_tiled(self, vae: Output, latent_image: Output):
         return self.add(
             "VAEDecodeTiled", 1, vae=vae, samples=latent_image, tile_size=512, overlap=64
         )
@@ -926,20 +909,12 @@ class ComfyWorkflow:
         if self._run_mode is ComfyRunMode.runtime:
             return self._load_image_batch(image, self._load_image_runtime, self.batch_image)
         else:
-            # minsky91: support for loading transient images stored in binary or text-encoded format
-            if settings.upload_method != "None":
-                return self._load_image_batch(image, self._load_image_transient, self.batch_image)
-            # end of minsky91 additions
             return self._load_image_batch(image, self._load_image_base64, self.batch_image)
 
     def load_mask(self, mask: Image | ImageCollection):
         if self._run_mode is ComfyRunMode.runtime:
             return self._load_image_batch(mask, self._load_mask_runtime, self.batch_mask)
         else:
-            # minsky91: support for loading transient mask images stored in binary or text-encoded format
-            if settings.upload_method != "None":
-                return self._load_image_batch(mask, self._load_mask_transient, self.batch_mask)
-            # end of minsky91 additions
             return self._load_image_batch(mask, self._load_mask_base64, self.batch_mask)
 
     def _load_image_runtime(self, image: Image):
@@ -982,22 +957,6 @@ class ComfyWorkflow:
         if self._run_mode is ComfyRunMode.runtime:
             return self.add("ETN_ReturnImage", 1, images=image)
         return self.add("ETN_SendImageWebSocket", 1, images=image, format="PNG")
-
-    # minsky91 (m91) / version with adaptable output format 
-
-    def send_image_http(self, image: Output, format: str, uid: str = ""):
-        return self.add("ETN_SendImagesTransient", 1, images=image, format=format, uid=uid)
-
-    def save_image_transient(self, image: Output, prefix: str):
-        return self.add("ETN_SaveTempImage", 1, images=image, filename_prefix=prefix)
-
-    def _load_image_transient(self, image: Image):
-        return self.add("ETN_LoadImageTransient", 1, uid=f"{image_uid(image)}")
-
-    def _load_mask_transient(self, mask: Image):
-        return self.add("ETN_LoadMaskTransient", 1, uid=f"{image_uid(mask)}")
-
-    # end of minsky91 additions
 
     def save_image(self, image: Output, prefix: str):
         return self.add("SaveImage", 1, images=image, filename_prefix=prefix)
@@ -1133,33 +1092,7 @@ class ComfyWorkflow:
             set_cond_area="default",
         )
 
-# minsky91 / added experimental support for TiledDiffusion
 
-    def tiled_diffusion(
-        self,
-        model: Output,
-        method: str = "Mixture of Diffusers",
-        tile_width: int = 1024,
-        tile_height: int = 1024,
-        tile_overlap: int = 96,
-        tile_batch_size: int = 6,
-    ):
-        return self.add(
-            "TiledDiffusion", 
-            1, 
-            model=model, 
-            method=method,
-            tile_width=tile_width, 
-            tile_height=tile_height, 
-            tile_overlap=tile_overlap, 
-            tile_batch_size=tile_batch_size,
-        )
-
-    def vae_decode_tiled(self, vae: Output, latent_image: Output, tile_size: int = 1024, overlap: int = 64, temporal_size: int = 64, temporal_overlap: int = 8):
-        return self.add("VAEDecodeTiled", 1, vae=vae, samples=latent_image, tile_size=tile_size, overlap=overlap, temporal_size=temporal_size, temporal_overlap=temporal_overlap)
-    def vae_encode_tiled(self, vae: Output, image: Output, tile_size: int = 1024, overlap: int = 64, temporal_size: int = 64, temporal_overlap: int = 8):
-        return self.add("VAEEncodeTiled", 1, pixels=image, vae=vae, tile_size=tile_size, overlap=overlap, temporal_size=temporal_size, temporal_overlap=temporal_overlap)
-        
 def _inputs_for_node(node_inputs: dict[str, dict[str, Any]], node_name: str, filter=""):
     inputs = node_inputs.get(node_name)
     if inputs is None:
@@ -1222,7 +1155,5 @@ def _convert_ui_workflow(w: dict, node_inputs: dict):
 
     return r
 
+
 _control_after_generate = ["fixed", "increment", "decrement", "randomize"]
-
-
-

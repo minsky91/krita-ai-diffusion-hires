@@ -14,6 +14,14 @@ from .util import ensure
 if TYPE_CHECKING:
     from . import control
 
+import json
+
+# minsky91:
+from .resources import Arch
+from .util import client_logger as log
+from .style import StyleSettings
+from .settings import Verbosity
+# end of minsky91 additions
 
 class JobState(Flag):
     queued = 0
@@ -80,9 +88,24 @@ class JobParams:
 
     def set_style(self, style: Style, checkpoint: str):
         self.metadata["style"] = style.filename
+        self.metadata["style_preset_name"] = style.name
         self.metadata["checkpoint"] = checkpoint
         self.metadata["loras"] = style.loras
-        self.metadata["sampler"] = f"{style.sampler} ({style.sampler_steps} / {style.cfg_scale})"
+        self.metadata["architecture"] = style.architecture.resolve(checkpoint)
+        # minsky91: extended the collected metadata code
+        #self.metadata["sampler"] = f"{style.sampler} ({style.sampler_steps} / {style.cfg_scale})"
+        sampler_str = style.sampler
+        if " - " in sampler_str:
+            before_dash, sampler_str = sampler_str.split(" - ", 1)
+        self.metadata["sampler"] = sampler_str
+        self.metadata["steps"] = style.sampler_steps
+        self.metadata["cfg_scale"] = style.cfg_scale
+        self.metadata["vae"] = style.vae
+        self.metadata["clip_skip"] = style.clip_skip
+        self.metadata["v_pred"] = style.v_prediction_zsnr
+        self.metadata["rescale_cfg"] = style.rescale_cfg
+        self.metadata["sag"] = style.self_attention_guidance
+        self.metadata["pref_res"] = style.preferred_resolution
 
     @property
     def prompt(self):
@@ -93,9 +116,148 @@ class JobParams:
         return self.metadata.get("style", "")
 
     @property
+    def style_preset_name(self):
+        return self.metadata.get("style_preset_name", "")
+
+    @property
     def strength(self):
         return self.metadata.get("strength", 1.0)
 
+    # minsky91: extended the collected metadata code
+    def seed(self):
+        return self.metadata.get("seed", 0.0)
+
+    @property
+    def negative_prompt(self):
+        return self.metadata.get("negative_prompt", "")
+    
+    @property
+    def steps(self):
+        return self.metadata.get("steps", "")
+    
+    @property
+    def sampler(self):
+        return self.metadata.get("sampler", "")
+    
+    @property
+    def cfg_scale(self):
+        return self.metadata.get("cfg_scale", "")
+    
+    @property
+    def checkpoint(self):
+        return self.metadata.get("checkpoint", "")
+        
+    @property
+    def architecture(self):
+        arch = self.metadata.get("architecture", "")
+        if isinstance(arch, str):
+            return arch
+        else:
+            return arch.value
+        
+    @property
+    def loras(self):
+        lora_str = ""
+        for lora in self.metadata.get("loras", ""):
+            if lora.get("enabled", True):
+                lora_strength = lora.get("strength", 0.0)
+                if lora_str != "":
+                    lora_str += "\n       " 
+                lora_str += lora.get("name", "") + f": strength {lora_strength:.1f} "
+        return lora_str
+
+    @property
+    def vae(self):
+        if self.metadata.get("vae", "") != StyleSettings.vae.default:
+            return self.metadata.get("vae", "")
+        else:
+            return ""
+
+    @property
+    def clip_skip(self):
+        if self.metadata.get("clip_skip", 0) != StyleSettings.clip_skip.default:
+            return self.metadata.get("clip_skip", 0)  
+        else:
+            return 0
+    
+    @property
+    def pref_res(self):
+        if self.metadata.get("pref_res", 0) != StyleSettings.preferred_resolution.default:
+            return self.metadata.get("pref_res", 0)  
+        else:
+            return 0
+    
+    @property
+    def v_pred(self):
+        if self.metadata.get("v_pred", False) != StyleSettings.v_prediction_zsnr.default:
+            return self.metadata.get("v_pred", False) 
+        else:
+            return None
+    
+    @property
+    def rescale_cfg(self):
+        if self.metadata.get("rescale_cfg", 0) != StyleSettings.rescale_cfg.default:
+            return self.metadata.get("rescale_cfg", 0)  
+        else:
+            return 0
+    
+    @property
+    def rescale_cfg(self):
+        return self.metadata.get("rescale_cfg", "")
+    
+    @property
+    def sag(self):
+        if self.metadata.get("sag", False) != StyleSettings.self_attention_guidance.default:
+            return self.metadata.get("sag", False) 
+        else:
+            return None
+    
+    @property
+    def input_resolution(self):
+        if self.metadata.get("input_resolution"):
+            return self.metadata.get("input_resolution", [0, 0])
+        else:
+            return 0, 0
+
+    @property
+    def canvas_resolution(self):
+        if self.metadata.get("canvas_resolution"):
+            return self.metadata.get("canvas_resolution", [0, 0])
+        else:
+            return 0, 0
+
+    @property
+    def output_resolution(self):
+        if self.metadata.get("output_resolution"):
+            return self.metadata.get("output_resolution", [0, 0])
+        else:
+            return 0, 0
+            
+    @property
+    def mask_resolution(self):
+        if self.metadata.get("mask_resolution"):
+            return self.metadata.get("mask_resolution", [0, 0])
+        else:
+            return 0, 0
+            
+    @property
+    def control_layers(self):
+        if self.metadata.get("control_layers"):
+            return self.metadata.get("control_layers", [])
+        else:
+            return None
+            
+    # recover & restore style from a Krita AI-written png file 
+    @staticmethod
+    def recover_style_preset(text: str):
+        if "Style Preset filename: " in text:
+            _, filename_plus_tail = text.split("Style Preset filename: ", 1)
+            style_filename, _ = filename_plus_tail.split(".json", 1)
+            return style_filename + ".json"
+        else:
+            return ""
+    
+    # end of minsky91 additions
 
 class Job:
     id: str | None
@@ -106,6 +268,10 @@ class Job:
     timestamp: datetime
     results: ImageCollection
     in_use: dict[int, bool]
+    # minsky91: add extended job metadata stats & basic workflow
+    stat_metadata: str
+    imageless_workflow: str
+    # end of minsky91 additions
 
     def __init__(self, id: str | None, kind: JobKind, params: JobParams):
         self.id = id
@@ -114,10 +280,136 @@ class Job:
         self.timestamp = datetime.now()
         self.results = ImageCollection()
         self.in_use = {}
+        # minsky91: add extended job metadata stats & basic workflow
+        self.stat_metadata = ""
+        self.imageless_workflow = ""
+        # end of minsky91 additions
 
     def result_was_used(self, index: int):
         return self.in_use.get(index, False)
 
+    # minsky91: added extended job metadata stats & basic workflow
+    
+    def get_stat_metadata(self, job: Job):
+        return "Generation stats:\n\n" + "\n".join(ml for ml in job.stat_metadata)
+
+    def get_workflow(self, job: Job):
+        return job.imageless_workflow
+        
+    def get_collected_metadata(self, job: Job, verbosity_setting: Verbosity, print_header: str | None):
+        is_verbose: bool = verbosity_setting in [Verbosity.verbose] 
+        is_verbose_or_medium: bool = verbosity_setting in [Verbosity.medium, Verbosity.verbose] 
+        collected_metadata: list[str] = []
+        collected_metadata.append(job.params.prompt)
+        collected_metadata.append("Negative prompt: " + job.params.negative_prompt + "  ")
+        collected_metadata.append("Steps: " + f"{job.params.steps}")
+        collected_metadata.append("Sampler: " + job.params.sampler)
+        collected_metadata.append("CFG scale: " + f"{job.params.cfg_scale}")
+        collected_metadata.append("Seed: " + f"{job.params.seed}")
+        collected_metadata.append("Model: " + job.params.checkpoint + f" ({self.params.architecture})")
+        collected_metadata.append("Denoising strength: " + f"{job.params.strength}")
+        collected_metadata.append("Style Preset: " + job.params.style_preset_name)
+        if is_verbose:
+            collected_metadata.append("Style Preset filename: " + job.params.style)
+        job_loras = job.params.loras 
+        if job_loras != "":
+            collected_metadata.append("LoRas: " + job_loras)
+        if is_verbose_or_medium:
+            if job.params.vae != "":
+                collected_metadata.append("VAE: " + job.params.vae)
+            if job.params.clip_skip != 0:
+                collected_metadata.append("Clip Skip: " + f"{job.params.clip_skip}")
+            if job.params.pref_res != 0:
+                collected_metadata.append("Preferred Resolution: " + f"{job.params.pref_res}")
+            if job.params.v_pred is not None:
+                collected_metadata.append("V-Prediction: " + f"{job.params.v_pred}")
+            if is_verbose:
+                if job.params.rescale_cfg != 0:
+                    collected_metadata.append("Rescale CFG: " + f"{job.params.rescale_cfg}")
+            if job.params.sag is not None:
+                collected_metadata.append("Self-attention Guidance: " + f"{job.params.sag}")
+        image_w, image_h = job.params.canvas_resolution
+        if image_w != 0:
+            collected_metadata.append("Canvas resolution: " + f"{image_w}x{image_h} pixels")
+        image_w, image_h = job.params.input_resolution
+        if is_verbose_or_medium:
+            if image_w != 0:
+                collected_metadata.append("Input resolution: " + f"{image_w}x{image_h} pixels")
+            image_w, image_h = job.params.output_resolution
+            if image_w != 0:
+                collected_metadata.append("Output resolution: " + f"{image_w}x{image_h} pixels")
+            image_w, image_h = job.params.mask_resolution
+            if image_w != 0:
+                collected_metadata.append("Mask resolution: " + f"{image_w}x{image_h} pixels")
+        if "control_layers" in job.params.metadata:
+            for control in job.params.metadata["control_layers"]:
+                collected_metadata.append(control)
+        if "regions" in job.params.metadata:
+            for region in job.params.metadata["regions"]:
+                collected_metadata.append(region)
+
+        # gather now the models used, by parsing the workflow seems the only practical way
+        the_workflow = job.get_workflow(job)
+        model_str = ""
+        def gather_models(model_key, model_type):
+            nonlocal model_str, the_workflow
+            text = the_workflow
+            model_kstr = f'\"{model_key}\": \"'
+            while model_kstr in text:
+                if len(text) <= len(model_key)+1:
+                    break
+                _, modelname_plus_tail = text.split(model_kstr, 1)
+                if not '\"' in modelname_plus_tail:
+                    break
+                model_filename, text = modelname_plus_tail.split('\"', 1)
+                if len(model_str) > 0:
+                    model_str += "\n               "
+                model_str += model_filename + f" ({model_type})" 
+        if is_verbose_or_medium:
+            gather_models("control_net_name", "ControlNet")
+            gather_models("ipadapter_file", "IPAdapter")
+            gather_models("model_name", "Upscale or Inpaint model")
+            gather_models("patch", "Inpaint patch model")
+            gather_models("style_model_name", "Style model")
+            if is_verbose:
+                gather_models("unet_name", "UNETLoader")
+                gather_models("clip_name", "CLIPVision")
+                gather_models("clip_name1", "DualCLIPLoader")
+                gather_models("clip_name2", "DualCLIPLoader")
+                gather_models("vae_name", "VAE")
+        if model_str != "":
+            model_str = "Models used: " + model_str
+            collected_metadata.append(model_str)
+
+        if job.stat_metadata:
+            collected_metadata.append("")
+            collected_metadata.append("Generation stats:")
+            for meta_line in job.stat_metadata:
+                # lines in stat_metadata are indented to indicate their verbosity level
+                if len(meta_line) >= 4 and meta_line[:4] == "    ":
+                    if is_verbose:
+                        stat_meta_str = meta_line[4:]
+                    else:
+                        continue
+                elif len(meta_line) >= 2 and meta_line[:2] == "  ":
+                    if is_verbose_or_medium:
+                        stat_meta_str = meta_line[2:]
+                    else:
+                        continue
+                else:
+                    stat_meta_str = meta_line
+                collected_metadata.append(stat_meta_str)
+                
+        if print_header is not None:
+            # tooltip or clipboard format
+            meta_str = "" if print_header == "" else print_header+"\n"
+            meta_str += "\n".join(ml for ml in collected_metadata)
+            return meta_str
+
+        return collected_metadata
+
+    # end of minsky91 additions
+        
 
 class JobQueue(QObject):
     """Queue of waiting, ongoing and finished jobs for one document."""
@@ -273,6 +565,15 @@ class JobQueue(QObject):
             if j.state in [JobState.queued, JobState.executing]:
                 j.state = JobState.cancelled
 
+
+    # minsky91: add extended job metadata stats & basic workflow
+    def set_stat_metadata(self, job: Job, stat_metadata: listr[str]):
+        job.stat_metadata = stat_metadata
+
+    def set_workflow(self, job: Job, workflow: listr[str]):
+        job.imageless_workflow = workflow
+
+    # end of minsky91 additions
 
 def _move_field(src: dict[str, Any], field: str, dest: dict[str, Any]):
     if field in src:

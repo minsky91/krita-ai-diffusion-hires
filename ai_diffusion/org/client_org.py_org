@@ -52,10 +52,6 @@ class ClientMessage(NamedTuple):
     images: ImageCollection | None = None
     result: ClientOutput | None = None
     error: str | None = None
-    # minsky91: added extended job stats & metadata 
-    metadata: list[str] | None = None
-    workflow: str = ""
-    # end of minsky91 additions
 
 
 class User(QObject, ObservableProperties):

@@ -21,9 +21,6 @@ from .widget import GenerateButton, ErrorBox, create_wide_tool_button
 from .region import RegionPromptWidget
 from . import theme
 
-# minsky91: added extended job stats & metadata 
-from ..settings import settings, Verbosity
-# end of minsky91 additions
 
 class HistoryWidget(QListWidget):
     _model: Model
@@ -140,13 +137,7 @@ class HistoryWidget(QListWidget):
                 item = QListWidgetItem(self._image_thumbnail(job, i), None)  # type: ignore (text can be None)
                 item.setData(Qt.ItemDataRole.UserRole, job.id)
                 item.setData(Qt.ItemDataRole.UserRole + 1, i)
-                # minsky91: fill tooltip with metadata according to save_gen_data and verbosity settings
-                if "Display in the tooltip" in settings.save_gen_data: # tooltips can be quite obtrusive
-                    tt_verbosity = settings.metadata_verbosity-1 if settings.metadata_verbosity > 0 else 0
-                    tt_metadata = job.get_collected_metadata(job, Verbosity(tt_verbosity), "Prompt:")
-                    item.setData(Qt.ItemDataRole.ToolTipRole, tt_metadata)
-                #item.setData(Qt.ItemDataRole.ToolTipRole, self._job_info(job.params))
-                # end of minsky91 modifications
+                item.setData(Qt.ItemDataRole.ToolTipRole, self._job_info(job.params))
                 self.addItem(item)
 
         if job.kind is JobKind.animation:
@@ -155,12 +146,7 @@ class HistoryWidget(QListWidget):
             ])
             item.setData(Qt.ItemDataRole.UserRole, job.id)
             item.setData(Qt.ItemDataRole.UserRole + 1, 0)
-            # minsky91: fill tooltip with metadata according to save_gen_data and verbosity settings
-            if "Display in the tooltip" in settings.save_gen_data: # tooltips can be quite obtrusive
-                tt_verbosity = settings.metadata_verbosity-1 if settings.metadata_verbosity > 0 else 0
-                tt_metadata = job.get_collected_metadata(job, Verbosity(tt_verbosity), "Prompt:")
-                item.setData(Qt.ItemDataRole.ToolTipRole, tt_metadata)
-            #item.setData(Qt.ItemDataRole.ToolTipRole, self._job_info(job.params))
+            item.setData(Qt.ItemDataRole.ToolTipRole, self._job_info(job.params))
             self.addItem(item)
 
         if scroll_to_bottom:
@@ -436,10 +422,7 @@ class HistoryWidget(QListWidget):
 
     def _info_to_clipboard(self):
         if (job := self.selected_job) and (clipboard := QGuiApplication.clipboard()):
-            # minsky91: send metadata info to clipboard according to verbosity settings
-            clipboard.setText(job.get_collected_metadata(job, Verbosity(settings.metadata_verbosity), "Prompt:"))
-            #clipboard.setText(self._job_info(job.params, tooltip_header=False))
-            # end of minsky91 modifications
+            clipboard.setText(self._job_info(job.params, tooltip_header=False))
 
     def _save_image(self):
         items = self.selectedItems()

@@ -36,13 +36,6 @@ from .region import Region, RegionLink, RootRegion, process_regions, get_region_
 from .resources import ControlMode
 from .resolution import compute_bounds, compute_relative_bounds
 
-# minsky91: added extended job stats & metadata 
-import json
-from PyQt5.QtGui import QImage, QImageWriter
-from PyQt5.QtCore import QByteArray, QFile
-from .comfy_workflow import image_uid
-from .settings import Verbosity
-# end of minsky91 additions
 
 class Workspace(Enum):
     generation = 0
@@ -236,62 +229,14 @@ class Model(QObject, ObservableProperties):
             inpaint=inpaint,
         )
         job_params = JobParams(bounds, prompt, regions=job_regions)
-        
-        # minsky91: implemented collecting full metadata
-        self.set_job_metadata(job_params, input, prompt, job_regions)
-        # end of minsky91 additions
-        
-        return input, job_params
-
-    # minsky91: extended the collected metadata code
-    def set_job_metadata(self, job_params, input, prompt, job_regions):
         job_params.set_style(self.style, ensure(input.models).checkpoint)
         job_params.metadata["prompt"] = prompt
         job_params.metadata["negative_prompt"] = self.regions.negative
         job_params.metadata["strength"] = self.strength
-        job_params.metadata["seed"] = self.seed
         if len(job_regions) == 1:
             job_params.metadata["prompt"] = job_params.name = job_regions[0].prompt
-        if input.images.initial_image is not None:
-            job_params.metadata["input_resolution"] = [input.images.initial_image.width, input.images.initial_image.height] 
-        if input.images.hires_mask is not None:
-            job_params.metadata["mask_resolution"] = [input.images.hires_mask.width, input.images.hires_mask.height] 
-        canvas_w, canvas_h = self.document.extent
-        control_meta: list[str] = [] 
-        control_uid_modes: dict[int, str] = {}
-        if input.conditioning is not None:
-            control_ix = 0
-            for control in input.conditioning.control:
-                control_ix += 1
-                if control.image:
-                    control_uid = image_uid(control.image)
-                    if control_uid in control_uid_modes and control_uid_modes[control_uid] == control.mode.text:
-                        continue   # skip duplicate control layers
-                    control_uid_modes[control_uid] = control.mode.text
-                    if control.image.width != canvas_w or control.image.height != canvas_h:
-                        res_str = f", resolution {control.image.width}x{control.image.height}"
-                    else:
-                        res_str = ""
-                else:
-                    res_str = ""
-                param_str = f"strength {control.strength:.2f}, range {control.range[0]:.2f}-{control.range[1]:.2f}"
-                control_str = f"Control layer {control_ix} ({control.mode.text}): {param_str}{res_str}"
-                control_meta.append(control_str) 
-        job_params.metadata["control_layers"] = control_meta
-        region_meta: list[str] = [] 
-        if job_regions is not None:
-            region_ix = 0
-            for region in job_regions:
-                region_ix += 1
-                if region.bounds.width != canvas_w or region.bounds.height != canvas_h:
-                    res_str = f", resolution {region.bounds.width}x{region.bounds.height}"
-                else:
-                    res_str = ""
-                region_str = f"Region {region_ix}: prompt <{region.prompt}>{res_str}"
-                region_meta.append(region_str) 
-        job_params.metadata["regions"] = region_meta
+        return input, job_params
 
-    
     async def enqueue_jobs(
         self, input: WorkflowInput, kind: JobKind, params: JobParams, count: int = 1
     ):
@@ -489,11 +434,8 @@ class Model(QObject, ObservableProperties):
     def _get_current_image(self, bounds: Bounds):
         exclude = None
         if self.workspace is not Workspace.live:
-            # minsky91: prevent canvas layer from being added to the exclude list, causing numerous issues
-            active_id = self._doc._layers._active_id
             exclude = [  # exclude control layers from projection
-                c.layer for c in self.regions.control if not c.mode.is_part_of_image 
-                    and not active_id == c.layer_id  # minsky91: this should be properly resolved elsewhere
+                c.layer for c in self.regions.control if not c.mode.is_part_of_image
             ]
             if self._layer:  # exclude preview layer
                 exclude.append(self._layer)
@@ -562,13 +504,6 @@ class Model(QObject, ObservableProperties):
         elif message.event is ClientEvent.output:
             self.custom.show_output(message.result)
         elif message.event is ClientEvent.finished:
-            # minsky91: added extended job stats & metadata 
-            if isinstance(message.workflow, str):
-                self.jobs.set_workflow(job, message.workflow)
-            if isinstance(message.metadata, list):
-                self.jobs.set_stat_metadata(job, message.metadata)
-            # end of minsky91 additions
-                
             if message.error:  # successful jobs may have encountered some warnings
                 self.report_error(Error.from_string(message.error, ErrorKind.warning))
             if message.images:
@@ -647,9 +582,6 @@ class Model(QObject, ObservableProperties):
         prefix="",
     ):
         bounds = Bounds(*params.bounds.offset, *image.extent)
-        # minsky91: had to disable the apply region-related logic, as it places absolutely useless gened region layers
-        # atop of the source ones, and grouping them together only makes this worse. Basically it looks like a mess
-        #if True:
         if len(params.regions) == 0 or region_behavior is ApplyRegionBehavior.none:
             if behavior is ApplyBehavior.replace:
                 self.layers.update_layer_image(self.layers.active, image, bounds)
@@ -1408,69 +1340,9 @@ def _save_job_result(model: Model, job: Job | None, index: int):
     timestamp = job.timestamp.strftime("%Y%m%d-%H%M%S")
     prompt = util.sanitize_prompt(job.params.name)
     path = Path(model.document.filename)
-
-    # minsky91: a convenience edit
-    base_filename = f"{path.stem}-generated-{timestamp}-{index}-{prompt}"
-
+    path = path.parent / f"{path.stem}-generated-{timestamp}-{index}-{prompt}.png"
+    path = util.find_unused_path(path)
     base_image = model._get_current_image(Bounds(0, 0, *model.document.extent))
     result_image = job.results[index]
     base_image.draw_image(result_image, job.params.bounds.offset)
-
-    # minsky91: setting-based selection of the output format png/jpeg
-    format_ext = ".png"
-    if max(result_image.width, result_image.height) >= settings.jpeg_res_threshold * 1024:
-        format_ext = ".jpg"
-    # end of minsky91 additions
-
-    path = path.parent / (base_filename+format_ext)
-    path = util.find_unused_path(path)
-
-    # minsky91: save gen metadata & workflow alongside the png file
-    job.params.metadata["output_resolution"] = [result_image.width, result_image.height] 
-    job.params.metadata["canvas_resolution"] = [base_image.width, base_image.height] 
-    metadata = job.get_collected_metadata(job, Verbosity(settings.metadata_verbosity), None)
-    if "As a text file" in settings.save_gen_data:
-        txt_filepath = path.with_suffix(".txt").absolute().as_posix()  
-        if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
-            log.info(f"_save_job_result: saving gen stats metadata in {txt_filepath}, settings.save_gen_data {settings.save_gen_data}")
-        with open(txt_filepath, "w") as f:
-            for meta_line in metadata:
-                f.write(meta_line+"\n")
-
-    # embed gen data & workflow in the output file (works only with png alas, kind of,
-    #  as comfyui frontend ignores zTXt-compressed png chunks that QImage produces in setText()
-    out_filepath = path.absolute().as_posix()  
-    if "Workflow embedded in the png file" in settings.save_gen_data:
-        the_workflow = job.get_workflow(job)
-        if the_workflow is None:
-            log.warning(f"_save_job_result: no workflow found in the gen results, ignored")
-        elif len(the_workflow) > 100*1024 or len(the_workflow) <= 32:
-            log.warning(f"_save_job_result: gen workflow too large or too small to be saved in the png file, ignored")
-        else:
-        #    with open(path.with_suffix(".json"), "w") as f:
-        #        f.write(the_workflow)
-            if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
-                log.info(f"_save_job_result: saving gen workflow of {len(the_workflow)/1024:.1f} KB size in {out_filepath}")
-            base_image._qimage.setText("prompt", the_workflow)
-
-    if "As metadata in the png file" in settings.save_gen_data:
-        # emulate an Automatic1111-compatible format
-        collected_metadata = f"{metadata[0]} \n{metadata[1]}\n" + ", ".join(ml for ml in metadata[2:])
-        base_image._qimage.setText("parameters", collected_metadata)
-    if format_ext == ".jpg":
-        class HQCompressionFileFormat(Enum):
-            webp_95 = ("webp", 95)   # not too useful for metadata
-            jpeg_95 = ("jpeg", 95)   # ditto
-        # using tweaked Image.save() code to allow custom jpeg compression
-        file = QFile(str(path))
-        if not file.open(QFile.OpenModeFlag.WriteOnly):
-            raise Exception(f"Failed to open {out_filepath} for writing: {file.errorString()}")
-        try:
-            base_image.write(file, HQCompressionFileFormat.jpeg_95)
-        finally:
-            file.close()
-        return
-    # end of minsky91 additions
-    
     base_image.save(path)
-

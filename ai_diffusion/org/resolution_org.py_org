@@ -9,8 +9,6 @@ from .resources import Arch
 from .settings import PerformanceSettings
 from .style import Style
 
-# minsky91
-from .settings import settings as plugin_settings
 
 def compute_bounds(extent: Extent, mask_bounds: Bounds | None, strength: float):
     """Compute the area of the image to use as input for diffusion (context area).
@@ -166,13 +164,10 @@ class CheckpointResolution(NamedTuple):
 def apply_resolution_settings(extent: Extent, settings: PerformanceSettings):
     result = extent * settings.resolution_multiplier
     max_pixels = settings.max_pixel_count * 10**6
-    # minsky91: couldn't find a more elegant way to lift the 99 MP capping 
-    if not (plugin_settings.enable_TD and plugin_settings.TD_res_threshold > 0) :
-        if max_pixels > 0 and result.pixel_count > int(max_pixels * 1.05):
-            result = result.scale_to_pixel_count(max_pixels)
+    if max_pixels > 0 and result.pixel_count > int(max_pixels * 1.05):
+        result = result.scale_to_pixel_count(max_pixels)
     return result
 
-from .util import clamp, ensure, trim_text, client_logger as log
 
 def prepare_diffusion_input(
     extent: Extent,

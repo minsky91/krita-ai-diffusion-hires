@@ -41,9 +41,6 @@ from .settings_widgets import SettingsTab, ComboBoxSetting, FileListSetting
 from .style import StylePresets
 from .theme import add_header, logo, red, yellow, green, grey
 
-# minsky91
-from ..settings import Verbosity
-# end of minsky91 additions
 
 class UserWidget(QFrame):
     _user: User | None = None
@@ -677,44 +674,6 @@ class PerformanceSettings(SettingsTab):
         ]
         settings.dynamic_caching = self._dynamic_caching.value
 
-# minsky91
-class HiresSettings(SettingsTab):
-    def __init__(self):
-        # most hires settings require special custom nodes, a managed Comfy server is a no-go
-        if settings.server_mode is ServerMode.external:
-            super().__init__(_("High Resolution Settings"))
-        else:
-            super().__init__(_("Extras"))
-
-        S = Settings
-        if settings.server_mode is ServerMode.external:
-            self.add("enable_TD", SwitchSetting(S._enable_TD, parent=self))
-            self.add("TD_res_threshold", SliderSetting(S._TD_res_threshold, self, 0, 32, "{} K"))
-            self.add("hires_auto_unblur", SwitchSetting(S._hires_auto_unblur, parent=self))
-            self.add("fast_receive", SwitchSetting(S._fast_receive, parent=self))
-            self.add("jpeg_res_threshold", SliderSetting(S._jpeg_res_threshold, self, 0, 32, "{} K"))
-            self.add("temp_files_receive", SwitchSetting(S._temp_files_receive, parent=self))
-            self.add("upload_method", ComboBoxSetting(S._upload_method, parent=self))
-            # z85 supported from v3.13 on
-            # encoding_settings = [(_("None (embedded in wf)"), "None"), (_("Binary"), "Binary"), (_("Base64"), "Base64"), (_("a85"), "a85"), (_("b85"), "b85"), (_("z85"), "z85")]
-            encoding_settings = [(_("Workflow-embedded (nonoptimal)"), "None"), (_("Binary, zero overhead"), "Binary"), (_("Base64"), "Base64"), (_("a85"), "a85"), (_("b85"), "b85")]
-            self._widgets["upload_method"].set_items(encoding_settings)
-
-        gen_info_choices = ["As a text file", "As metadata in the png file", "Workflow embedded in the png file", "Display in the tooltip"]
-        self.add("save_gen_data", FileListSetting(S._save_gen_data, gen_info_choices, parent=self))
-        self._layout.addWidget(self._widgets["save_gen_data"].list_widget)
-        self._widgets["save_gen_data"].reset_files(gen_info_choices)
-
-        self.add("metadata_verbosity", ComboBoxSetting(S._metadata_verbosity, parent=self))
-        metadata_verbosity_settings = [(_("Essential"), 0), (_("Medium"), 1), (_("Verbose"), 2)]
-        self._widgets["metadata_verbosity"].set_items(metadata_verbosity_settings)
-
-        self.add("logfile_verbosity", ComboBoxSetting(S._logfile_verbosity, parent=self))
-        logfile_verbosity_settings = [(_("Essential"), 0), (_("Medium"), 1), (_("Verbose"), 2)]
-        self._widgets["logfile_verbosity"].set_items(logfile_verbosity_settings)
-
-        self._layout.addStretch()
-
 
 class AboutSettings(SettingsTab):
     def __init__(self):
@@ -894,9 +853,6 @@ class SettingsDialog(QDialog):
         self.diffusion = DiffusionSettings()
         self.interface = InterfaceSettings()
         self.performance = PerformanceSettings()
-        # minsky91: hires additions
-        self.hires = HiresSettings()
-
         self.about = AboutSettings()
 
         self._stack = QStackedWidget(self)
@@ -913,8 +869,6 @@ class SettingsDialog(QDialog):
         create_list_item(_("Diffusion"), self.diffusion)
         create_list_item(_("Interface"), self.interface)
         create_list_item(_("Performance"), self.performance)
-        # minsky91
-        create_list_item(_("Hires"), self.hires)
         create_list_item(_("Plugin"), self.about)
 
         self._list.setCurrentRow(0)
@@ -959,8 +913,6 @@ class SettingsDialog(QDialog):
         self.diffusion.read()
         self.interface.read()
         self.performance.read()
-        # minsky91
-        self.hires.read()
         self.about.read()
 
     def restore_defaults(self):

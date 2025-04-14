@@ -66,13 +66,6 @@ class PerformancePreset(Enum):
     cloud = _("Cloud")
     custom = _("Custom")
 
-# minsky91
-class Verbosity(Enum):
-    essential = 0
-    medium = 1
-    verbose = 2
-# end of minsky91 additions
-
 
 class PerformancePresetSettings(NamedTuple):
     batch_size: int = 4
@@ -105,6 +98,7 @@ class Setting:
             return EnumType[s]
         except KeyError:
             return self.default
+
 
 class Settings(QObject):
     default_path = user_data_dir / "settings.json"
@@ -339,65 +333,6 @@ class Settings(QObject):
         False,
         _("Write latest ComfyUI prompt to the log folder for test & debug"),
     )
-
-    # minsky91
-    enable_TD: bool
-    _enable_TD = Setting(
-        _("Enable Tiled Diffusion"), False, _("Enable Tiled Diffusion (MoD method), tiled VAE encode & decode.")
-    )
-    
-    TD_res_threshold: int
-    _TD_res_threshold = Setting(
-        _("TD Activate Resolution"), 0, _("Minimum image resolutiion to activate Tiled Diffusion, in K pixels.")
-    )
-
-    hires_auto_unblur: bool
-    _hires_auto_unblur = Setting(
-        _("Hires Auto-Unblur"), False, _("Auto-add Unblur control when refining hires images (uses TD Act.Resolution as threshold).")
-    )
-    
-    fast_receive: bool
-    _fast_receive = Setting(
-        _("Fast Receive"), False, _("Receive images using http protocol (for hires images, times faster than using websockets).")
-    )
-    
-    jpeg_res_threshold: int
-    _jpeg_res_threshold = Setting(
-        _("Lowest Jpeg Resolution"), 10, _("Min. image resolutiion at which jpeg compression is used during image transfers, in K pixels.")
-    )
-
-    temp_files_receive: bool
-    _temp_files_receive = Setting(
-        _("Use Temporary Files (testing only)"), False, _("Receive images using temporary file storage (equally fast).")
-    )
-    
-    upload_method: str
-    _upload_method = Setting(
-        _("Upload Method"), "None", _("Upload method (binary PUT) or binary-to-text encoding type (POST) for sending input images.")
-    )
-    
-    save_gen_data: list[str]
-    _save_gen_data = Setting(
-        _("Save Gen Data"), 
-        list(), 
-        _("Save generation data alongside the Save Image png file.")
-    )
-    
-    metadata_verbosity: Verbosity
-    _metadata_verbosity = Setting(
-        _("Metadata Verbosity"), 
-        0, 
-        _("Level of metadata verbosity.")
-    )
-    
-    logfile_verbosity: Verbosity
-    _logfile_verbosity = Setting(
-        _("Logfile Verbosity"), 
-        0, 
-        _("Level of client.log message verbosity.")
-    )
-
-    # end of minsky91 additions
 
     document_defaults: dict[str, Any]
     _document_defaults = Setting(_("Document Defaults"), {}, _("Recently used document settings"))

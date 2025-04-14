@@ -20,11 +20,6 @@ from .settings import settings
 from .localization import translate as _
 from .util import client_logger as log, encode_json
 
-# minsky91
-from .image import Image, ImageFileFormat
-from .settings import Verbosity
-# end of minsky91 additions
-
 # Version of the persistence format, increment when there are breaking changes
 version = 1
 
@@ -225,19 +220,7 @@ class ModelSync:
         if job.kind in [JobKind.diffusion, JobKind.animation] and len(job.results) > 0:
             slot = self._slot_index
             self._slot_index += 1
-            # minsky91: for consistence's sake, and also to prevent 
-            # QImageWriter throwing an exception at line 512 in image.py 
-            # when saving ultra hires image result (> 12x12K), 
-            # use medium-quality jpeg format instead of the default webp
-            compr_format = None
-            for img in job.results:
-                if (max(img.width, img.height) >= settings.jpeg_res_threshold * 1024): 
-                    compr_format = ImageFileFormat.jpeg
-            if compr_format is not None:
-                image_data, image_offsets = job.results.to_bytes(format=compr_format)
-            else:
-                image_data, image_offsets = job.results.to_bytes()
-            # end of minsky91 additions
+            image_data, image_offsets = job.results.to_bytes()
             self._model.document.annotate(f"result{slot}.webp", image_data)
             self._history.append(
                 _HistoryResult(job.id or "", slot, image_offsets, job.params, job.kind, job.in_use)
@@ -327,22 +310,12 @@ def import_prompt_from_file(model: Model):
     if model.regions.positive == "" and model.regions.negative == "" and filename.endswith(exts):
         try:
             reader = QImageReader(filename)
-            # A1111 (minsky91: or Krita AI with metadata supported)
+            # A1111
             if text := reader.text("parameters"):
                 if "Negative prompt:" in text:
                     positive, negative = text.split("Negative prompt:", 1)
                     model.regions.positive = positive.strip()
                     model.regions.negative = negative.split("Steps:", 1)[0].strip()
-                # minsky91: recover & restore style from a Krita AI-written png file 
-                style_filename = JobParams.recover_style_preset(text)
-                if style_filename != "":
-                    model.style = Styles.list().find(style_filename) or Styles.list().default
-                    if model.style.name != Styles.list().default.name:
-                        if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
-                            log.info(f"import_prompt_from_file: found {model.style.name} style as {style_filename} in {filename}, applying to the document")
-                        elif Verbosity(settings.logfile_verbosity) in [Verbosity.medium]: 
-                            log.info(f"found {model.style.name} style in the input imnge, applying to the document")
-                # end of minsky91 additions
             # ComfyUI
             elif text := reader.text("prompt"):
                 prompt: dict[str, dict] = json.loads(text)
