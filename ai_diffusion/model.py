@@ -6,7 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 from enum import Enum
 from tempfile import TemporaryDirectory
-import time
+import time as systime
 from typing import Any, NamedTuple
 from PyQt5.QtCore import QObject, QUuid, pyqtSignal, Qt
 from PyQt5.QtGui import QPainter, QColor, QBrush
@@ -38,10 +38,15 @@ from .resolution import compute_bounds, compute_relative_bounds
 
 # minsky91: added extended job stats & metadata 
 import json
+import sys
+import os
 from PyQt5.QtGui import QImage, QImageWriter
 from PyQt5.QtCore import QByteArray, QFile
+from datetime import datetime
 from .comfy_workflow import image_uid
 from .settings import Verbosity
+from .comfy_client import get_time_diff, get_size as size_of
+from krita import *
 # end of minsky91 additions
 
 class Workspace(Enum):
@@ -561,6 +566,10 @@ class Model(QObject, ObservableProperties):
             self.progress = message.progress
         elif message.event is ClientEvent.output:
             self.custom.show_output(message.result)
+        # minsky91: added progress preview 
+        elif message.event is ClientEvent.progress_preview:
+            self.show_progress_preview(job, message.preview)
+        # end of minsky91 additions
         elif message.event is ClientEvent.finished:
             # minsky91: added extended job stats & metadata 
             if isinstance(message.workflow, str):
@@ -572,6 +581,10 @@ class Model(QObject, ObservableProperties):
             if message.error:  # successful jobs may have encountered some warnings
                 self.report_error(Error.from_string(message.error, ErrorKind.warning))
             if message.images:
+                # minsky91: added progress preview 
+                if settings.progress_preview:
+                    self.show_progress_preview(job, message.images[0])
+                # end of minsky91 additions
                 self.jobs.set_results(job, message.images)
             if job.kind is JobKind.control_layer:
                 assert job.control is not None
@@ -633,6 +646,32 @@ class Model(QObject, ObservableProperties):
         else:
             self._layer = self.layers.create(name, image, bounds, make_active=False)
             self._layer.is_locked = True
+
+# minsky91: show progress preview in the preview layer
+
+    def show_progress_preview(self, job: Job, image: Image, name_prefix="Progress preview"):
+        assert job is not None, "Cannot show preview, invalid job id"
+        if job.kind is JobKind.animation:
+            return  # don't show animation preview on canvas (it's slow and clumsy)
+
+        if len(self.jobs.selection) > 0:
+            return  # user is viewing something else
+        name = f"[{name_prefix}] {trim_text(job.params.name, 36)}"
+        bounds = job.params.bounds
+        if image.extent != bounds.extent:
+            image = Image.scale(image, Bounds(0, 0, *bounds.extent))
+        if self._layer and self._layer.was_removed:
+            self._layer = None  # layer was removed by user
+        if self._layer is not None:
+            self._layer.name = name
+            if self._layer.is_visible:
+                self._layer.write_pixels(image, bounds)
+            self._layer.move_to_top()
+        else:
+            self._layer = self.layers.create(name, image, bounds, make_active=False)
+            self._layer.is_locked = True
+
+# end of minsky91 additions
 
     def hide_preview(self):
         if self._layer is not None:
@@ -1409,8 +1448,12 @@ def _save_job_result(model: Model, job: Job | None, index: int):
     prompt = util.sanitize_prompt(job.params.name)
     path = Path(model.document.filename)
 
-    # minsky91: a convenience edit
-    base_filename = f"{path.stem}-generated-{timestamp}-{index}-{prompt}"
+    # minsky91: prevent filename overflowng the 256 char limit
+    gen_info_str = f"-generated-{timestamp}-{index}-{prompt}"
+    if len(path.absolute().as_posix()) + len(gen_info_str) >= 240:
+        base_filename = f"{path.stem}"
+    else:
+        base_filename = f"{path.stem}" + gen_info_str
 
     base_image = model._get_current_image(Bounds(0, 0, *model.document.extent))
     result_image = job.results[index]
@@ -1428,7 +1471,7 @@ def _save_job_result(model: Model, job: Job | None, index: int):
     # minsky91: save gen metadata & workflow alongside the png file
     job.params.metadata["output_resolution"] = [result_image.width, result_image.height] 
     job.params.metadata["canvas_resolution"] = [base_image.width, base_image.height] 
-    metadata = job.get_collected_metadata(job, Verbosity(settings.metadata_verbosity), None)
+    metadata = job.get_collected_metadata(job=job, verbosity_setting=Verbosity(settings.metadata_verbosity), print_header=None, wrap_text=None)
     if "As a text file" in settings.save_gen_data:
         txt_filepath = path.with_suffix(".txt").absolute().as_posix()  
         if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
@@ -1457,20 +1500,54 @@ def _save_job_result(model: Model, job: Job | None, index: int):
         # emulate an Automatic1111-compatible format
         collected_metadata = f"{metadata[0]} \n{metadata[1]}\n" + ", ".join(ml for ml in metadata[2:])
         base_image._qimage.setText("parameters", collected_metadata)
-    if format_ext == ".jpg":
-        class HQCompressionFileFormat(Enum):
-            webp_95 = ("webp", 95)   # not too useful for metadata
-            jpeg_95 = ("jpeg", 95)   # ditto
+    if format_ext == ".jpg" or format_ext == ".png":
+        uncompr_img_mb_size: float = base_image.width*base_image.height*3 / 1024.0**2
+        im_str = f"{base_image.width}x{base_image.height} image"
         # using tweaked Image.save() code to allow custom jpeg compression
-        file = QFile(str(path))
-        if not file.open(QFile.OpenModeFlag.WriteOnly):
-            raise Exception(f"Failed to open {out_filepath} for writing: {file.errorString()}")
-        try:
-            base_image.write(file, HQCompressionFileFormat.jpeg_95)
-        finally:
-            file.close()
+        class HQCompressionFileFormat(Enum):
+            jpeg_95 = ("jpeg", 95)   # not very useful for metadata
+            png_95 = ("png", 95)     # uncompressed / alpha channel
+            png_90 = ("png", 90)     # uncompressed / alpha channel
+            png_89 = ("png", 89)     # Comfy PIL ~compr 1
+            png_85 = ("png", 85)     # well-balanced, used in Krita AI & Hires
+            png_80 = ("png", 80)     # 
+            png_70 = ("png", 70)     # 
+            png_58 = ("png", 58)     # 
+            png_50 = ("png", 50)     # Krita AI default, slow
+            png_42 = ("png", 42)     # 
+            png_35 = ("png", 35)     # compr 2, much too slow
+        format = HQCompressionFileFormat.png_89 if format_ext == ".png" else HQCompressionFileFormat.jpeg_95
+        im_str = f"{base_image.width}x{base_image.height} image"
+        formats: list[HQCompressionFileFormat] = [HQCompressionFileFormat.png_85] 
+        if format_ext == ".jpg": 
+            formats = [HQCompressionFileFormat.jpeg_95]
+        for compr_format in formats:
+            path = util.find_unused_path(path)
+            filename = path.absolute().as_posix()  
+            file = QFile(str(path))
+            if not file.open(QFile.OpenModeFlag.WriteOnly):
+                raise Exception(f"Failed to open {out_filepath} for writing: {file.errorString()}")
+            format_str, quality = compr_format.value
+            writer = QImageWriter(file, QByteArray(format_str.encode("utf-8")))
+            writer.setQuality(quality)
+            #writer.setOptimizedWrite(True)
+            start_time = datetime.now()
+            try:
+                result = writer.write(base_image._qimage)
+                #base_image.write(file, compr_format)
+            finally:
+               file.close()
+            # filesize stats for image saving
+            time_diff, time_diff_str = get_time_diff(start_time) 
+            img_mb_size: float = os.path.getsize(path) / 1024.0**2
+            if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
+                im_mb_str = f"{img_mb_size:.1f} MB"
+                im_mb_unc_str = f"({uncompr_img_mb_size:.1f} MB uncompr)"
+                log.info(f"_save_job_result: QImage saved {im_str} in {im_mb_str} file {im_mb_unc_str}, {compr_format}, {time_diff_str}")
+            
         return
     # end of minsky91 additions
     
     base_image.save(path)
 
+    

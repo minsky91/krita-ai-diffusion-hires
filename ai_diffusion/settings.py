@@ -343,58 +343,63 @@ class Settings(QObject):
     # minsky91
     enable_TD: bool
     _enable_TD = Setting(
-        _("Enable Tiled Diffusion"), False, _("Enable Tiled Diffusion (MoD method), tiled VAE encode & decode.")
+        _("Enable Tiled Diffusion"), False, _("Enable Tiled Diffusion (MoD method), tiled VAE encode & decode")
     )
     
     TD_res_threshold: int
     _TD_res_threshold = Setting(
-        _("TD Activate Resolution"), 0, _("Minimum image resolutiion to activate Tiled Diffusion, in K pixels.")
+        _("TD Activate Resolution"), 0, _("Minimum image resolution to activate Tiled Diffusion, in K pixels")
     )
 
-    hires_auto_unblur: bool
-    _hires_auto_unblur = Setting(
-        _("Hires Auto-Unblur"), False, _("Auto-add Unblur control when refining hires images (uses TD Act.Resolution as threshold).")
-    )
-    
-    fast_receive: bool
-    _fast_receive = Setting(
-        _("Fast Receive"), False, _("Receive images using http protocol (for hires images, times faster than using websockets).")
-    )
-    
-    jpeg_res_threshold: int
-    _jpeg_res_threshold = Setting(
-        _("Lowest Jpeg Resolution"), 10, _("Min. image resolutiion at which jpeg compression is used during image transfers, in K pixels.")
-    )
-
-    temp_files_receive: bool
-    _temp_files_receive = Setting(
-        _("Use Temporary Files (testing only)"), False, _("Receive images using temporary file storage (equally fast).")
+    hiresfix_guidance: int
+    _hiresfix_guidance = Setting(
+        _("Hiresfix Guidance"), 0, _("Hiresfix fidelity when refining generated hires images")
     )
     
     upload_method: str
     _upload_method = Setting(
-        _("Upload Method"), "None", _("Upload method (binary PUT) or binary-to-text encoding type (POST) for sending input images.")
+        _("Upload Method"), "None", _("Upload method for submitting input images, binary or text-encoded")
+    )
+    
+    fast_receive: bool
+    _fast_receive = Setting(
+        _("Fast Receive"), False, _("Receive images using http protocol instead of slow websockets")
+    )
+    
+    jpeg_res_threshold: int
+    _jpeg_res_threshold = Setting(
+        _("Lowest Jpeg Resolution"), 10, _("Min. image resolutiion to switch to jpeg in image transfers, in K pixels")
+    )
+
+    temp_files_receive: bool
+    _temp_files_receive = Setting(
+        _("Use Temporary Files (testing only)"), False, _("Receive images using server\'s temporary file storage")
+    )
+    
+    progress_preview: bool
+    _progress_preview = Setting(
+        _("Progress Preview"), False, _("Display generation progress in the preview layer")
     )
     
     save_gen_data: list[str]
     _save_gen_data = Setting(
         _("Save Gen Data"), 
         list(), 
-        _("Save generation data alongside the Save Image png file.")
+        _("Save generation data alongside the Save Image png file")
     )
     
     metadata_verbosity: Verbosity
     _metadata_verbosity = Setting(
         _("Metadata Verbosity"), 
         0, 
-        _("Level of metadata verbosity.")
+        _("Level of metadata verbosity")
     )
     
     logfile_verbosity: Verbosity
     _logfile_verbosity = Setting(
         _("Logfile Verbosity"), 
         0, 
-        _("Level of client.log message verbosity.")
+        _("Level of client.log message verbosity")
     )
 
     # end of minsky91 additions

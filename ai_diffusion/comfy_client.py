@@ -35,7 +35,7 @@ from base64 import a85encode, b85encode
 from PyQt5.QtCore import QByteArray
 import PyQt5.QtCore
 import json
-from .settings import Verbosity
+from .settings import Verbosity, ServerMode
 
 # global timestamp for logging of timing operations
 import sys
@@ -134,9 +134,10 @@ class JobStats:
             self.exec_elapsed_time = 0.0
         self.metadata.append(f"Execution time: {self.exec_elapsed_time:.1f} sec.")
         if is_end:
-            self.set_total_active_time()
+            total_active_time = self.set_total_active_time()
             lifetime, _ = get_time_diff(self.submit_time)
             self.metadata.append(f"    Total lifetime: {lifetime:.1f} sec.")
+            return total_active_time
         return self.exec_elapsed_time
 
     def add_batch_active_time(self, add_time: float = 0.0):
@@ -439,7 +440,7 @@ class ComfyClient(Client):
         # minsky91: save workflow for metadata and upload input images
         if settings.upload_method != "None":        
             job.stats.save_workflow(workflow.root)  # won't save a wf with BASE64-encoded images
-            result = await self._upload_input_images(job)
+            result = await self._upload_input_images(job, workflow.get_image_uids())
         # end of minsky91 additions
 
         data = {"prompt": workflow.root, "client_id": self._id, "front": job.front}
@@ -490,7 +491,8 @@ class ComfyClient(Client):
             try:
                 await self._subscribe_workflows()
                 # minsky91: reset transient http storage
-                await self._reset_transient_storage()        
+                if settings.server_mode is ServerMode.external:
+                    await self._reset_transient_storage()        
                 await self._listen_websocket(websocket)
             except websockets.exceptions.ConnectionClosedError as e:
                 log.warning(f"Websocket connection closed: {str(e)}")
@@ -516,13 +518,23 @@ class ComfyClient(Client):
 
         # minsky91
         global last_timestamp
+        last_workflow_name = ""
 
         async for msg in websocket:
             
             if isinstance(msg, bytes):
-                image = _extract_message_png_image(memoryview(msg))
+                # minsky91: added progress preview
+                image, is_preview = _extract_message_png_image(memoryview(msg), settings.progress_preview)
                 if image is not None:
-                    images.append(image)
+                    if is_preview:
+                        job = self._active
+                        if job is not None and (progress is None or progress.value > 0.5):
+                            await self._report(
+                                ClientEvent.progress_preview, job.local_id, preview=image
+                            )
+                    else:
+                        images.append(image)
+                # end of minsky91 modifications
 
             elif isinstance(msg, str):
 
@@ -552,7 +564,7 @@ class ComfyClient(Client):
                     if job:
                         # minsky91: job logging, timing & stats
                         exec_elapsed_time = job.stats.set_exec_elapsed_time(is_end=True)
-                        exec_time_str = f", EXEC time {exec_elapsed_time:.2f} sec." if exec_elapsed_time != 0.0 else ""
+                        exec_time_str = f", active time {exec_elapsed_time:.2f} sec." if exec_elapsed_time != 0.0 else ""
                         if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
                             log.info(f"_listen_websocket: websocket executing msg: job {job.local_id} has been interrupted{exec_time_str}")
                         # end of minsky91 additions
@@ -676,8 +688,9 @@ class ComfyClient(Client):
                 if msg["type"] == "etn_workflow_published":
                     name = f"{msg['data']['publisher']['name']} ({msg['data']['publisher']['id']})"
                     # minsky91: job logging, timing & stats
-                    if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
+                    if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose] and last_workflow_name != name: 
                         log.info(f"_listen_websocket: websocket etn_workflow_published msg: name {name}")
+                    last_workflow_name = name
                     workflow = SharedWorkflow(name, msg["data"]["workflow"])
                     await self._report(ClientEvent.published, "", result=workflow)
 
@@ -712,7 +725,8 @@ class ComfyClient(Client):
             self._is_connected = False
             self._job_runner.cancel()
             # minsky91: reset transient http storage
-            await self._reset_transient_storage()        
+            if settings.server_mode is ServerMode.external:
+                await self._reset_transient_storage()        
             self._websocket_listener.cancel()
             await asyncio.gather(
                 self._job_runner,
@@ -764,18 +778,22 @@ class ComfyClient(Client):
             if settings.upload_method == "Base64":
                 image_bytes = image_bytes.toBase64()
             elif settings.upload_method == "a85":
-                image_bytes = QByteArray(a85encode(b=image_bytes, pad=True))
+                image_bytes = QByteArray(a85encode(b=image_bytes, pad=False))
             elif settings.upload_method == "b85":
-                image_bytes = QByteArray(b85encode(b=image_bytes, pad=True))
+                image_bytes = QByteArray(b85encode(b=image_bytes, pad=False))
             #elif settings.upload_method == "z85":
-            #    image_bytes = QByteArray(z85encode(b=image_bytes, pad=True))  # supported from v3.13 on
+            #    image_bytes = QByteArray(z85encode(b=image_bytes, pad=False))  # supported from v3.13 on
             image_bytes = image_bytes.data().decode("utf-8")
             post_data = {"image_data": f"{image_bytes}", "encode": settings.upload_method} 
             _, enc_time_str = get_time_diff(time) 
             img_enc_mb = len(image_bytes) / 1024.0**2
             enc_ratio = (img_enc_mb-img_compr_mb) * 100 / img_compr_mb
             if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
-                log.info(f"_upload_image_http: posting {settings.upload_method}-encoded data of {img_enc_mb:.2f} MB size (from {img_compr_mb:.2f} MB unencoded, {enc_ratio:.1f}% overhead), encoding {enc_time_str}")
+                enc_str = f"{settings.upload_method}-encoded data"
+                mb_size_str = f"{img_enc_mb:.2f} MB size"
+                enc_size_str = f"(from {img_compr_mb:.2f} MB unencoded, {enc_ratio:.1f}% overhead)"
+                enc_time_str = f"encoding {enc_time_str}"
+                log.info(f"_upload_image_http: posting {enc_str} of {mb_size_str} {enc_size_str}, {enc_time_str}")
         try:
             if do_post:
                 result = await self._post(f"{query}", post_data)
@@ -789,7 +807,7 @@ class ComfyClient(Client):
         return 0, 0, 0.0
 
                 
-    async def _upload_input_images(self, job: JobInfo):
+    async def _upload_input_images(self, job: JobInfo, wf_image_uids: list[int]):
         total_uploaded_size = 0
         total_compr_time = 0.0
         uploaded_images = 0
@@ -805,17 +823,18 @@ class ComfyClient(Client):
             
         # use the image's unique ID attribute to avoid unnecessary uploads
         def check_and_append(the_image):
-            nonlocal input_images, new_uids, cached_images, non_cached_images
+            nonlocal input_images, new_uids, cached_images, non_cached_images, wf_image_uids
             if the_image is not None:
                 im_uid = image_uid(the_image)
-                if im_uid not in self._input_image_uids:
-                    if im_uid not in new_uids:
-                        new_uids.append(im_uid)
-                        input_images.append(the_image)
-                    non_cached_images += 1
-                else:
-                    cached_images += 1
-        
+                if len(wf_image_uids) == 0 or (im_uid in wf_image_uids):
+                    if im_uid not in self._input_image_uids:
+                        if im_uid not in new_uids:
+                            new_uids.append(im_uid)
+                            input_images.append(the_image)
+                        non_cached_images += 1
+                    else:
+                        cached_images += 1
+                    
         im_w = 0
         im_h = 0
         if work.images.initial_image is not None:
@@ -908,12 +927,12 @@ class ComfyClient(Client):
                 log.info(f"_upload_input_images: {uploaded_str}{max_compr_time_str}{cached_str}{current_uids_str}")
             elif Verbosity(settings.logfile_verbosity) in [Verbosity.medium]: 
                 log.info(f"{uploaded_str}")
-        await asyncio.sleep(0.5)  # prevent hasty actions by the server 
+        #await asyncio.sleep(0.75)  # prevent hasty actions by the server 
 
         return result
     
 # minsky91: methods to download output images using server's transient storage,
-# as a replacement for slow winsocks-based transfers
+# as a replacement for slow websocket-based transfers
     
     async def _receive_image_http(self, format: str, uid: str, image_index:int = 1):
         try:
@@ -960,9 +979,11 @@ class ComfyClient(Client):
                 
 
     async def _receive_view_image(self, subfolder: str, filename: str, do_preview: bool=False):
-        query: str = f"/view?filename={filename}&type=temp&subfolder={subfolder}&channel=rgba"
+        query: str = f"/view?filename={filename}&type=temp&subfolder={subfolder}"
         if do_preview:
-            query = query + "&preview=jpeg;95"
+            query += "&preview=jpeg;95"
+        else:
+            query += "&channel=rgba"
         if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
             log.info(f"_receive_view_image: submiting query {query}")
         try:
@@ -993,10 +1014,14 @@ class ComfyClient(Client):
                 log.info(f"_receive_transient_images requesting image file: {subfolder}/{filename}, jpeg preview mode {do_preview}")
             time = datetime.now()
             image_received = await self._receive_view_image(subfolder, filename, do_preview)
-            _, time_diff_str = get_time_diff(time) 
-            img_mb_size: float = len(image_received) / 1024.0**2
-            if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
-                log.info(f"_receive_transient_images: server returned a {img_mb_size:.2f} MB image, {time_diff_str}")
+            _, time_diff_str = get_time_diff(time)
+            img_mb_size: float = 0.0
+            if image_received is not None:
+                img_mb_size = len(image_received) / 1024.0**2
+                if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
+                    log.info(f"_receive_transient_images: server returned a {img_mb_size:.2f} MB image, {time_diff_str}")
+            else:
+                log.info(f"_receive_transient_images ERROR: failure while receiving image, {time_diff_str}")
             if image_received is not None:
                images.append(Image.from_bytes(image_received))
             else:
@@ -1012,17 +1037,18 @@ class ComfyClient(Client):
             return 0.0
         add_active_time = finished_job.stats.prep_elapsed_time + finished_job.stats.exec_elapsed_time
         result = finished_job.stats.get_batch_active_time() + add_active_time  # this is returned if the job is last in the batch
-        next_seed = finished_job.work.sampling.seed
-        # follow consecutive sample seeds in the jobs to update the batch's timing data
         batch_jobs = 0
-        for job in self._jobs:
-            if job.work.sampling.seed == next_seed + settings.batch_size:
-                batch_jobs += 1
-                job.stats.add_batch_active_time(add_active_time)
-                next_seed += settings.batch_size
-                result = 0.0   # some jobs in the batch are still pending
-            else:
-                break
+        if finished_job.work.sampling != None:
+            next_seed = finished_job.work.sampling.seed
+            # follow consecutive sample seeds in the jobs to update the batch's timing data
+            for job in self._jobs:
+                if job.work.sampling.seed == next_seed + settings.batch_size:
+                    batch_jobs += 1
+                    job.stats.add_batch_active_time(add_active_time)
+                    next_seed += settings.batch_size
+                    result = 0.0   # some jobs in the batch are still pending
+                else:
+                    break
         for job in self._jobs:
             job.stats.set_job_batch_size(batch_jobs+1)
         
@@ -1398,14 +1424,15 @@ async def _list_languages(client: ComfyClient) -> list[TranslationPackage]:
         return []
 
 
-def _extract_message_png_image(data: memoryview):
-    # minsky91
+def _extract_message_png_image(data: memoryview, need_preview: bool):
+    # minsky91: added progress preview and extended logs
     global last_timestamp
     s = struct.calcsize(">II")
     if len(data) > s:
         event, format = struct.unpack_from(">II", data)
 
         # minsky91: setting-based extended log info & job stats
+        image = None
         _, time_diff_str = get_time_diff(last_timestamp) 
         img_mb_size: float = len(data) / 1024.0**2
         preview_str = "" if event == 1 and format == 2 else " progress preview"
@@ -1413,13 +1440,17 @@ def _extract_message_png_image(data: memoryview):
             preview_str += " JPEG"
         else:
             preview_str += " PNG"
+        if event == 1 and (need_preview or format == 2):  # format: JPEG=1, PNG=2
+            image = Image.from_bytes(data[s:])
+        size_str = f" of {img_mb_size:.2f} MB size"
+        dim_str = f" {image.width}x{image.height}" if image is not None else ""
         if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
-            log.info(f"_extract_message_png_image: event {str(event)} format {str(format)}, received{preview_str} image of {img_mb_size:.2f} MB size, {time_diff_str}")
-        # end of minsky91 additions
-
-        if event == 1 and format == 2:  # format: JPEG=1, PNG=2
-            return Image.from_bytes(data[s:])
-    return None
+            log.info(f"_extract_message_png_image: event {str(event)} format {str(format)}, received a{dim_str}{preview_str} image{size_str}, {time_diff_str}")
+        last_timestamp = datetime.now()
+        return image, (format == 1)
+            
+    return None, (format == 1)
+    # end of minsky91 additions and modifications
 
 
 def _extract_pose_json(msg: dict):

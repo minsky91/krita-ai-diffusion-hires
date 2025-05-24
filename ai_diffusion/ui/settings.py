@@ -690,16 +690,22 @@ class HiresSettings(SettingsTab):
         if settings.server_mode is ServerMode.external:
             self.add("enable_TD", SwitchSetting(S._enable_TD, parent=self))
             self.add("TD_res_threshold", SliderSetting(S._TD_res_threshold, self, 0, 32, "{} K"))
-            self.add("hires_auto_unblur", SwitchSetting(S._hires_auto_unblur, parent=self))
-            self.add("fast_receive", SwitchSetting(S._fast_receive, parent=self))
-            self.add("jpeg_res_threshold", SliderSetting(S._jpeg_res_threshold, self, 0, 32, "{} K"))
-            self.add("temp_files_receive", SwitchSetting(S._temp_files_receive, parent=self))
+            self.add("hiresfix_guidance", SliderSetting(S._hiresfix_guidance, self, -20, 20))
             self.add("upload_method", ComboBoxSetting(S._upload_method, parent=self))
-            # z85 supported from v3.13 on
-            # encoding_settings = [(_("None (embedded in wf)"), "None"), (_("Binary"), "Binary"), (_("Base64"), "Base64"), (_("a85"), "a85"), (_("b85"), "b85"), (_("z85"), "z85")]
-            encoding_settings = [(_("Workflow-embedded (nonoptimal)"), "None"), (_("Binary, zero overhead"), "Binary"), (_("Base64"), "Base64"), (_("a85"), "a85"), (_("b85"), "b85")]
+            encoding_settings = [
+                (_("Binary, optimal"), "Binary"), 
+                (_("Base64"), "Base64"), 
+                #(_("a85"), "a85"),  # too slow
+                #(_("b85"), "b85"),  # too slow
+                #(_("z85"), "z85"),   # z85 supported from v3.13 on 
+                (_("Workflow-embedded (testing only)"), "None"), 
+            ]
             self._widgets["upload_method"].set_items(encoding_settings)
+            self.add("fast_receive", SwitchSetting(S._fast_receive, parent=self))
+            # self.add("temp_files_receive", SwitchSetting(S._temp_files_receive, parent=self))
 
+        self.add("jpeg_res_threshold", SliderSetting(S._jpeg_res_threshold, self, 0, 32, "{} K"))
+        self.add("progress_preview", SwitchSetting(S._progress_preview, parent=self))
         gen_info_choices = ["As a text file", "As metadata in the png file", "Workflow embedded in the png file", "Display in the tooltip"]
         self.add("save_gen_data", FileListSetting(S._save_gen_data, gen_info_choices, parent=self))
         self._layout.addWidget(self._widgets["save_gen_data"].list_widget)

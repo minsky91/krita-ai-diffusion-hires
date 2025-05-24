@@ -19,8 +19,10 @@ import json
 # minsky91:
 from .resources import Arch
 from .util import client_logger as log
-from .style import StyleSettings
+from .style import StyleSettings, SamplerPresets
 from .settings import Verbosity
+from .util import flatten
+from textwrap import wrap
 # end of minsky91 additions
 
 class JobState(Flag):
@@ -95,9 +97,11 @@ class JobParams:
         # minsky91: extended the collected metadata code
         #self.metadata["sampler"] = f"{style.sampler} ({style.sampler_steps} / {style.cfg_scale})"
         sampler_str = style.sampler
+        preset = SamplerPresets.instance()[sampler_str]
         if " - " in sampler_str:
             before_dash, sampler_str = sampler_str.split(" - ", 1)
         self.metadata["sampler"] = sampler_str
+        self.metadata["scheduler"] = preset.scheduler
         self.metadata["steps"] = style.sampler_steps
         self.metadata["cfg_scale"] = style.cfg_scale
         self.metadata["vae"] = style.vae
@@ -138,6 +142,10 @@ class JobParams:
     @property
     def sampler(self):
         return self.metadata.get("sampler", "")
+    
+    @property
+    def scheduler(self):
+        return self.metadata.get("scheduler", "")
     
     @property
     def cfg_scale(self):
@@ -296,14 +304,19 @@ class Job:
     def get_workflow(self, job: Job):
         return job.imageless_workflow
         
-    def get_collected_metadata(self, job: Job, verbosity_setting: Verbosity, print_header: str | None):
+    def get_collected_metadata(self, job: Job, verbosity_setting: Verbosity, print_header: str | None, wrap_text: int | None):
         is_verbose: bool = verbosity_setting in [Verbosity.verbose] 
         is_verbose_or_medium: bool = verbosity_setting in [Verbosity.medium, Verbosity.verbose] 
         collected_metadata: list[str] = []
+        if print_header is not None and print_header != "":
+            # tooltip or clipboard format
+            collected_metadata.append(print_header)
         collected_metadata.append(job.params.prompt)
         collected_metadata.append("Negative prompt: " + job.params.negative_prompt + "  ")
         collected_metadata.append("Steps: " + f"{job.params.steps}")
         collected_metadata.append("Sampler: " + job.params.sampler)
+        if len(job.params.scheduler) >= 2:
+            collected_metadata.append("Schedule type: " + job.params.scheduler[:1].upper()+job.params.scheduler[1:])
         collected_metadata.append("CFG scale: " + f"{job.params.cfg_scale}")
         collected_metadata.append("Seed: " + f"{job.params.seed}")
         collected_metadata.append("Model: " + job.params.checkpoint + f" ({self.params.architecture})")
@@ -401,10 +414,14 @@ class Job:
                 collected_metadata.append(stat_meta_str)
                 
         if print_header is not None:
-            # tooltip or clipboard format
-            meta_str = "" if print_header == "" else print_header+"\n"
-            meta_str += "\n".join(ml for ml in collected_metadata)
-            return meta_str
+            # tooltip or clipboard format: insert newlines and wrap long lines
+            meta_strings: list[str] = []
+            for ms in collected_metadata:
+                if wrap_text is not None:
+                    ms = wrap(ms, wrap_text, subsequent_indent=" ")
+                meta_strings.append(ms)
+            meta_strings = flatten(meta_strings)
+            return "\n".join(ms for ms in meta_strings)
 
         return collected_metadata
 

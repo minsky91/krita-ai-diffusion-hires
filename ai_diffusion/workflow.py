@@ -43,7 +43,7 @@ def base_TD_tile_extent(arch: Arch):
     min_size, max_size, _, _ = CheckpointResolution.compute(Extent(1024, 1024), arch)
     #tile_size = max(min_size, style.preferred_resolution)
     # having no access to the style makes calculation of TD tile size rather clunky
-    tile_size = multiple_of((min_size+max_size)//2, 32)
+    tile_size = multiple_of((min_size+max_size)*22//41, 32)
     return Extent(tile_size, tile_size)
 
 def send_image_http(w: ComfyWorkflow, sampling: SamplingInput, out_image: Output):
@@ -240,7 +240,9 @@ class ImageOutput:
         if self._output is None:
             if self.image is None:
                 self._output = ensure(default_image)
-                if reshape.target_extent is not None:
+                # minsky91: avoid rescales that trigger Comfy errors
+                if reshape.target_extent is not None and max(reshape.target_extent.width, reshape.target_extent.height) < 16384:
+                    #log.info(f"load: reshape.target_extent {reshape.target_extent}, scaling to target_extent")
                     self._output = w.scale_image(self._output, reshape.target_extent)
             elif self.is_mask:
                 self._output = w.load_mask(self.image)
@@ -464,11 +466,11 @@ def apply_attention_mask(
         return model, None
         
     # minsky91: Tiled Diffusion is found, as of Apr 2025, to be incompatible with region masks.
-    # skip attention masks step if TD is enabled (it seems to work without them just fine)
+    # when refining hires images. This step is skipped when TD is enabled (it seems to work without regions just fine)
     extent = shape if isinstance(shape, Extent) else shape.target_extent
-    if check_TD_plug(extent):
-        if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
-            log.info(f"apply_attention_mask: extent {extent}, skipping attn mask node insertion in the workflow")
+    if extent is not None and check_TD_plug(extent):
+        #if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
+        #    log.info(f"apply_attention_mask: extent {extent}, skipping attn mask node insertion in the workflow")
         return model, None
 
     if len(cond.regions) == 1:
@@ -642,13 +644,13 @@ def apply_regional_ip_adapter(
     shape: Extent | ImageReshape,
     models: ModelDict,
 ):
-    # minsky91: Tiled Diffusion is found, as of Apr 2025, to be incompatible with regional IPadapters.
-    # skip this step step if TD is enabled (it seems to work without them just fine)
+    # minsky91: Tiled Diffusion is found, as of Apr 2025, to be incompatible with regional IPadapters 
+    # when refining hires images. This step is skipped if TD is enabled (it seems to work without regions just fine)
     extent = shape if isinstance(shape, Extent) else shape.target_extent
-    if check_TD_plug(extent):
+    if extent is not None and check_TD_plug(extent):
     #if settings.enable_TD and settings.server_mode is ServerMode.external:
-        if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
-            log.info(f"apply_regional_ip_adapter: extent {extent}, skipping regional IP adapter node insertion in the workflow")
+        #if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
+        #    log.info(f"apply_regional_ip_adapter: extent {extent}, skipping regional IP adapter node insertion in the workflow")
         return model
         
     for region in (r for r in regions if r.mask):
@@ -659,20 +661,20 @@ def apply_regional_ip_adapter(
 def apply_tiled_diffusion(
     w: ComfyWorkflow, model: Output, arch: Arch, extent: Extent, tile_overlap: int
 ):
-    if tile_overlap > 0: 
-        tile_overlap_td = tile_overlap
-    else:
-        tile_overlap_td = 64
     # estimate a reasonable tile batch size based on the tile size (a guesswork basically) 
     min_size, max_size, _, _ = CheckpointResolution.compute(Extent(1024, 1024), arch)
-    reasonable_tile_size = (min_size + max_size) // 2
+    reasonable_tile_size = (min_size + max_size)*22//41  # lands at 1024 for SDXL
     if max(extent.width, extent.height) > reasonable_tile_size:
         tile_width = reasonable_tile_size; #768
         tile_height = reasonable_tile_size; #768
     else:
-        tile_width = multiple_of(extent.width, 8); #768
-        tile_height = multiple_of(extent.height, 8); #768
-    tile_batch = min(max(6 / ((tile_width*tile_height) / (1024*1024)), 1), 12)
+        tile_width = extent.width     #768
+        tile_height = extent.height   #768
+    tile_width = multiple_of(tile_width, 32); #768
+    tile_height = multiple_of(tile_width, 32); #768
+    base_tile_overlap = 64 if max(extent.width, extent.height) < 6*1024 else 96
+    tile_overlap_td = tile_overlap if tile_overlap > 0 else base_tile_overlap
+    tile_batch:int = int(min(max(8 / ((tile_width*tile_height) / (1024*1024)), 1), 12))
     model = w.tiled_diffusion(
 	model, "Mixture of Diffusers", tile_width, tile_height, tile_overlap_td, tile_batch
     )
@@ -688,18 +690,21 @@ def apply_unblur(
     extent: Extent,
     vae: Output,
     models: ModelDict,
-    strength: float
+    strength: float = 0.4,
+    range_start: float = 0.0,
+    range_end: float = 1.0
 ):
 
     unblur_list: list[Control] = [] 
     has_unblur = models.control.find(ControlMode.blur, allow_universal=True) is not None
     if has_unblur:
-        unblur_list.append(Control(ControlMode.blur, ImageOutput(image), None, strength, (0.0, 1.0)))
+        unblur_list.append(Control(ControlMode.blur, ImageOutput(image), None, strength, (range_start, range_end)))
         model, positive, negative = apply_control(
             w, model, positive, negative, unblur_list, extent, vae, models
         )
 
     return model, positive, negative
+# end of minsky91 additions
 
 def scale(
     extent: Extent,
@@ -777,21 +782,38 @@ def scale_refine_and_decode(
         upscaler = models.upscale[UpscalerName.default]
 
     upscale_model = w.load_upscale_model(upscaler)
-    # minsky91: use the dedciated tiled VAE decode to avoid VRAM-related slow-downs with TD
-    do_tiled_diffusion = check_TD_plug(extent.desired)
-    if do_tiled_diffusion:
+    # minsky91: for large resolutions, use the dedciated tiled VAE decode 
+    # to avoid VRAM-related slow-downs with TD
+    if check_TD_plug(extent.initial):
         decoded = w.vae_decode_tiled(vae, latent, 1024, 64, 64, 8)
     else:
-        decoded = w.vae_decode(vae, latent, tiled_vae)
+        decoded = vae_decode(w, vae, latent, tiled_vae)
     upscale = w.upscale_image(upscale_model, decoded)
     upscale = w.scale_image(upscale, extent.desired)
     
     # minsky91: speed up things with the dedciated tiled VAE encode 
+    do_tiled_diffusion = check_TD_plug(extent.desired)
     if do_tiled_diffusion:
         latent = w.vae_encode_tiled(vae, upscale, 1024, 64, 64, 8)
     else:
         latent = w.vae_encode(vae, upscale)
-    params = _sampler_params(sampling, strength=0.4)
+    # minsky91: user-controlled Hiresfix guidance around the default 0.4
+    if settings.hiresfix_guidance != 0 or do_tiled_diffusion:
+        #if settings.fast_receive:
+        #   send_image_http(w, None, upscale)
+        # map the guidance range to hiresfix denoise values (TD or not TD)
+        # (for TD, assisted by additionally inserting a special unblur control)
+        hiresfix_denoise_value = 0.4 - settings.hiresfix_guidance / 100.
+        # for TD at 0 guidance, use the optimal value of 0.2 to keep faint tiled hallucinations away
+        if do_tiled_diffusion:
+            if settings.hiresfix_guidance == 0:
+                 hiresfix_denoise_value = 0.2
+            # on the very left, preserve a selected range of unblur-free high denoise values 
+            elif settings.hiresfix_guidance < -16:
+                 hiresfix_denoise_value = 0.2 - (settings.hiresfix_guidance+16) / 10.0  
+        params = _sampler_params(sampling, strength=hiresfix_denoise_value)
+    else:    # end of minsky91 additions 
+        params = _sampler_params(sampling, strength=0.4)
 
     positive, negative = encode_text_prompt(w, cond, clip, regions)
 
@@ -803,12 +825,18 @@ def scale_refine_and_decode(
         w, model, positive, negative, cond.all_control, extent.desired, vae, models
     )
 
-    # minsky81: insert unblur control to tie with the just upscaled image
-    if settings.hires_auto_unblur and not models.arch is Arch.flux: 
-        if (max(extent.desired.width, extent.desired.height) >= settings.TD_res_threshold * 1024):
+    # minsky81: user-controlled Hiresfix guidance
+    if settings.hiresfix_guidance != 0 and not models.arch is Arch.flux: 
+        # insert an unblur control to tie with the just upscaled image, with a modulated effect
+        if do_tiled_diffusion and settings.hiresfix_guidance >= -16 and settings.hiresfix_guidance <= 16:
+            if settings.hiresfix_guidance < 0:
+                unblur_strength = 0.42   # within high denoise range, use a fixed universal value
+            else:
+                unblur_strength = 0.43 - settings.hiresfix_guidance / 100.0  # modulate to decrease the strength  
             model, positive, negative = apply_unblur(
-                w, model, positive, negative, upscale, extent.desired, vae, models, 0.35
+                w, model, positive, negative, upscale, extent.desired, vae, models, unblur_strength, 0.0, 0.9
             )
+    # end of minsky91 additions             
         
     result = w.sampler_custom_advanced(model, positive, negative, latent, models.arch, **params)
 
@@ -1129,32 +1157,38 @@ def refine(
     model, regions = apply_attention_mask(w, model, cond, clip, extent.initial)
     model = apply_regional_ip_adapter(w, model, cond.regions, extent.initial, models)
 
-    # minsky91: check & plug in Tiled Diffusion now
-    do_tiled_diffusion =  check_TD_plug(extent.initial)
-    #log.info(f"refine: extent.initial {extent.initial}, do_tiled_diffusion {do_tiled_diffusion}")
-    if do_tiled_diffusion:
-        model = apply_tiled_diffusion(w, model, models.arch, base_TD_tile_extent(models.arch), 0)
-
     in_image = w.load_image(image)
     in_image = scale_to_initial(extent, w, in_image, models)
-    # minsky91: explicit tiled VAE encode speeds things up with TD 
-    if do_tiled_diffusion:
-        latent = w.vae_encode_tiled(vae, in_image, 1024, 64, 64, 8)
+
+    #log.info(f"refine: extent.initial {extent.initial}")
+    # minsky91: treat zero strength as request to skip refine altogether (e.g. for dry run testing)  
+    if sampling.denoise_strength <= 0.01:
+        if Verbosity(settings.logfile_verbosity) in [Verbosity.verbose]: 
+            log.info(f"refine: skipping refine due to (near) zero denoise strength")
+        out_image = in_image
     else:
-        latent = w.vae_encode(vae, in_image)
-    latent = w.batch_latent(latent, misc.batch_count)
-    positive, negative = encode_text_prompt(w, cond, clip, regions)
-    model, positive, negative = apply_control(
-        w, model, positive, negative, cond.all_control, extent.desired, vae, models
-    )
-    sampler = w.sampler_custom_advanced(
-        model, positive, negative, latent, models.arch, **_sampler_params(sampling)
-    )
-    # minsky91: explicit tiled VAE decode speeds things up with TD 
-    if do_tiled_diffusion:
-        out_image = w.vae_decode_tiled(vae, sampler, 1024, 64, 64, 8)
-    else:
-        out_image = vae_decode(w, vae, sampler, checkpoint.tiled_vae)
+        # minsky91: check & plug in Tiled Diffusion now
+        do_tiled_diffusion =  check_TD_plug(extent.initial)
+        if do_tiled_diffusion:
+            model = apply_tiled_diffusion(w, model, models.arch, extent.initial, 0)
+            # explicit tiled VAE encode speeds things up with TD 
+            latent = w.vae_encode_tiled(vae, in_image, 1024, 64, 64, 8)
+        else:
+            latent = w.vae_encode(vae, in_image)
+        latent = w.batch_latent(latent, misc.batch_count)
+        positive, negative = encode_text_prompt(w, cond, clip, regions)
+        model, positive, negative = apply_control(
+            w, model, positive, negative, cond.all_control, extent.desired, vae, models
+        )
+        sampler = w.sampler_custom_advanced(
+            model, positive, negative, latent, models.arch, **_sampler_params(sampling)
+        )
+        # minsky91: explicit tiled VAE decode speeds things up with TD 
+        if do_tiled_diffusion:
+            out_image = w.vae_decode_tiled(vae, sampler, 1024, 64, 64, 8)
+        else:
+            out_image = vae_decode(w, vae, sampler, checkpoint.tiled_vae)
+            
     out_image = w.nsfw_filter(out_image, sensitivity=misc.nsfw_filter) 
     out_image = scale_to_target(extent, w, out_image, models)
     # minsky91: receive images using http protocol, if enabled by the user
@@ -1338,23 +1372,13 @@ def upscale_tiled(
     models: ModelDict,
 ):
     upscale_factor = extent.initial.width / extent.input.width
-    
-    # minsky91 plug in Tiled Diffusion now 
-    do_tiled_diffusion = check_TD_plug(extent.initial)
-    extent_desired_width = extent.desired.width
-    upscale_tile_overlap = upscale.tile_overlap
-    # for TD to work efficiently with large files, ensure that the tile layout consists 
-    # of a single or multiple monolithic tiles of 8K size (tested on images of up to 16K)
-    if do_tiled_diffusion:
-        extent_desired_width = multiple_of(min(extent.initial.width, 1024*8), 8)
-    
-    if upscale_tile_overlap >= 0:
-        layout = TileLayout(extent.initial, extent_desired_width, upscale_tile_overlap) # m91
+    if upscale.tile_overlap >= 0:
+        layout = TileLayout(extent.initial, extent.desired.width, upscale.tile_overlap)
     else:
         layout = TileLayout.from_denoise_strength(
-            extent.initial, extent_desired_width, sampling.denoise_strength  # m91
+            extent.initial, extent.desired.width, sampling.denoise_strength
         )
-        
+
     model, clip, vae = load_checkpoint_with_lora(w, checkpoint, models.all)
     model = apply_ip_adapter(w, model, cond.control, models)
 
@@ -1402,28 +1426,18 @@ def upscale_tiled(
             w, tile_model, positive, negative, control, no_reshape, vae, models
         )
 
-        # minsky91: plug in Tiled Diffusion now
-        # tile size used by TD is equal to preferred resolution (derived from extent.initial.width/high) 
-        if do_tiled_diffusion:
-            tile_model = apply_tiled_diffusion(w, tile_model, models.arch, extent.desired, upscale_tile_overlap)
-            # a dedciated tiled VAE encode essential to avoid VRAM-related slow-downs with TD 
-            latent = w.vae_encode_tiled(vae, tile_image, 1024, 64, 64, 8)
-        else:
-            latent = w.vae_encode(vae, tile_image)
+        latent = w.vae_encode(vae, tile_image)
         latent = w.set_latent_noise_mask(latent, tile_mask)
         sampler = w.sampler_custom_advanced(
             tile_model, positive, negative, latent, models.arch, **_sampler_params(sampling)
         )
-        # minsky91: a dedciated tile VAE decode essential to avoid VRAM-related slow-downs with TD 
-        if do_tiled_diffusion:
-            tile_result = w.vae_decode_tiled(vae, sampler, 1200, 64, 64, 8)
-        else:
-            tile_result = vae_decode(w, vae, sampler, checkpoint.tiled_vae)
+        tile_result = vae_decode(w, vae, sampler, checkpoint.tiled_vae)
         out_image = w.merge_image_tile(out_image, tile_layout, i, tile_result)
 
     out_image = w.nsfw_filter(out_image, sensitivity=misc.nsfw_filter)
     if extent.initial != extent.target:
         out_image = scale(extent.initial, extent.target, ScaleMode.resize, w, out_image, models)
+
     # minsky91: receive images using http protocol, if enabled by the user
     if settings.fast_receive:
         send_image_http(w, sampling, out_image)

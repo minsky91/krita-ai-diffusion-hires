@@ -15,6 +15,9 @@ from .resources import CustomNode, ResourceId
 from .localization import translate as _
 from .util import client_logger as log
 
+# minsky91
+from .image import Image
+
 
 class ClientEvent(Enum):
     progress = 0
@@ -28,6 +31,8 @@ class ClientEvent(Enum):
     published = 8
     output = 9
     payment_required = 10
+    # minsky91: added progress preview
+    progress_preview = 11
 
 
 class TextOutput(NamedTuple):
@@ -52,7 +57,8 @@ class ClientMessage(NamedTuple):
     images: ImageCollection | None = None
     result: ClientOutput | None = None
     error: str | None = None
-    # minsky91: added extended job stats & metadata 
+    # minsky91: added progress preview, extended job stats & metadata 
+    preview: Image | None = None
     metadata: list[str] | None = None
     workflow: str = ""
     # end of minsky91 additions
@@ -190,8 +196,9 @@ class ModelDict:
 
         result = self._models.find(ResourceId(self.kind, self.arch, key))
         # Fallback to universal model if not found
-        if result is None and allow_universal and isinstance(key, ControlMode):
-            result = self.find(ControlMode.universal)
+        if result is None and allow_universal:
+            if isinstance(key, ControlMode) and key.can_substitute_universal(self.arch):
+                result = self.find(ControlMode.universal)
         return result
 
     def for_version(self, arch: Arch):

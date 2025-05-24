@@ -143,7 +143,12 @@ class HistoryWidget(QListWidget):
                 # minsky91: fill tooltip with metadata according to save_gen_data and verbosity settings
                 if "Display in the tooltip" in settings.save_gen_data: # tooltips can be quite obtrusive
                     tt_verbosity = settings.metadata_verbosity-1 if settings.metadata_verbosity > 0 else 0
-                    tt_metadata = job.get_collected_metadata(job, Verbosity(tt_verbosity), "Prompt:")
+                    tt_metadata = job.get_collected_metadata(
+			job=job, 
+			verbosity_setting=Verbosity(tt_verbosity), 
+			print_header="Prompt:", 
+			wrap_text=60
+		    )
                     item.setData(Qt.ItemDataRole.ToolTipRole, tt_metadata)
                 #item.setData(Qt.ItemDataRole.ToolTipRole, self._job_info(job.params))
                 # end of minsky91 modifications
@@ -158,7 +163,12 @@ class HistoryWidget(QListWidget):
             # minsky91: fill tooltip with metadata according to save_gen_data and verbosity settings
             if "Display in the tooltip" in settings.save_gen_data: # tooltips can be quite obtrusive
                 tt_verbosity = settings.metadata_verbosity-1 if settings.metadata_verbosity > 0 else 0
-                tt_metadata = job.get_collected_metadata(job, Verbosity(tt_verbosity), "Prompt:")
+                tt_metadata = job.get_collected_metadata(
+	            job=job, 
+	            verbosity_setting=Verbosity(tt_verbosity), 
+	            print_header="Prompt:", 
+	            wrap_text=60
+	        )
                 item.setData(Qt.ItemDataRole.ToolTipRole, tt_metadata)
             #item.setData(Qt.ItemDataRole.ToolTipRole, self._job_info(job.params))
             self.addItem(item)
@@ -437,7 +447,15 @@ class HistoryWidget(QListWidget):
     def _info_to_clipboard(self):
         if (job := self.selected_job) and (clipboard := QGuiApplication.clipboard()):
             # minsky91: send metadata info to clipboard according to verbosity settings
-            clipboard.setText(job.get_collected_metadata(job, Verbosity(settings.metadata_verbosity), "Prompt:"))
+            #clipboard.setText(job.get_collected_metadata(job=job, verbosity_setting=Verbosity(settings.metadata_verbosity), print_header="Prompt:"))
+            clipboard.setText(
+                job.get_collected_metadata(
+                    job=job, 
+                    verbosity_setting=Verbosity(settings.metadata_verbosity), 
+                    print_header="Prompt:", 
+                    wrap_text=None
+                )
+            )
             #clipboard.setText(self._job_info(job.params, tooltip_header=False))
             # end of minsky91 modifications
 

@@ -75,6 +75,8 @@ class ComfyWorkflow:
         self._cache: dict[str, Output | Output2 | Output3 | Output4] = {}
         self._nodes_inputs: dict[str, dict[str, Any]] = node_inputs or {}
         self._run_mode: ComfyRunMode = run_mode
+        # minsky91: support for loading transient images stored in binary or text-encoded format
+        self.image_uids: list[int] = []
 
     @staticmethod
     def import_graph(existing: dict, node_inputs: dict):
@@ -219,6 +221,15 @@ class ComfyWorkflow:
         id = str(uuid4())
         self.images[id] = image
         return id
+
+    # minsky91: support for loading transient images stored in binary or text-encoded format
+    def add_image_uid(self, uid):
+        if not uid in self.image_uids:
+            self.image_uids.append(uid)
+
+    def get_image_uids(self):
+        return self.image_uids
+    # end of minsky91 additions
 
     # Nodes
 
@@ -967,10 +978,22 @@ class ComfyWorkflow:
     def load_image_and_mask(self, images: Image | ImageCollection):
         assert self._run_mode is ComfyRunMode.server
         if isinstance(images, Image):
-            return self.add("ETN_LoadImageBase64", 2, image=images.to_base64())
+            # minsky91: support for loading transient images stored in binary or text-encoded format
+            if settings.upload_method != "None":
+                im_uid = image_uid(images)
+                self.add_image_uid(im_uid)
+                return self.add("ETN_LoadImageTransient", 2, uid=f"{im_uid}")
+            else:
+                return self.add("ETN_LoadImageBase64", 2, image=images.to_base64())
         result = None
         for image in images:
-            img, mask = self.add("ETN_LoadImageBase64", 2, image=image.to_base64())
+            # minsky91: support for loading transient images stored in binary or text-encoded format
+            if settings.upload_method != "None":
+                im_uid = image_uid(image)
+                self.add_image_uid(im_uid)
+                img, mask = self.add("ETN_LoadImageTransient", 2, uid=f"{im_uid}")
+            else:
+                img, mask = self.add("ETN_LoadImageBase64", 2, image=image.to_base64())
             if result:
                 result = (self.batch_image(result[0], img), self.batch_mask(result[1], mask))
             else:
@@ -992,10 +1015,14 @@ class ComfyWorkflow:
         return self.add("ETN_SaveTempImage", 1, images=image, filename_prefix=prefix)
 
     def _load_image_transient(self, image: Image):
-        return self.add("ETN_LoadImageTransient", 1, uid=f"{image_uid(image)}")
+        im_uid = image_uid(image)
+        self.add_image_uid(im_uid)
+        return self.add("ETN_LoadImageTransient", 1, uid=f"{im_uid}")
 
     def _load_mask_transient(self, mask: Image):
-        return self.add("ETN_LoadMaskTransient", 1, uid=f"{image_uid(mask)}")
+        mask_uid = image_uid(mask)
+        self.add_image_uid(mask_uid)
+        return self.add("ETN_LoadMaskTransient", 1, uid=f"{mask_uid}")
 
     # end of minsky91 additions
 
@@ -1144,6 +1171,7 @@ class ComfyWorkflow:
         tile_overlap: int = 96,
         tile_batch_size: int = 6,
     ):
+        #log.info(f"tiled_diffusion: TD params tile width {tile_width} height {tile_height} overlap {tile_overlap} batch_size {tile_batch_size} method {method}")
         return self.add(
             "TiledDiffusion", 
             1, 
@@ -1159,6 +1187,8 @@ class ComfyWorkflow:
         return self.add("VAEDecodeTiled", 1, vae=vae, samples=latent_image, tile_size=tile_size, overlap=overlap, temporal_size=temporal_size, temporal_overlap=temporal_overlap)
     def vae_encode_tiled(self, vae: Output, image: Output, tile_size: int = 1024, overlap: int = 64, temporal_size: int = 64, temporal_overlap: int = 8):
         return self.add("VAEEncodeTiled", 1, pixels=image, vae=vae, tile_size=tile_size, overlap=overlap, temporal_size=temporal_size, temporal_overlap=temporal_overlap)
+       
+# end of minsky91 additions
         
 def _inputs_for_node(node_inputs: dict[str, dict[str, Any]], node_name: str, filter=""):
     inputs = node_inputs.get(node_name)

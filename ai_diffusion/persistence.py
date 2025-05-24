@@ -225,13 +225,12 @@ class ModelSync:
         if job.kind in [JobKind.diffusion, JobKind.animation] and len(job.results) > 0:
             slot = self._slot_index
             self._slot_index += 1
-            # minsky91: for consistence's sake, and also to prevent 
-            # QImageWriter throwing an exception at line 512 in image.py 
-            # when saving ultra hires image result (> 12x12K), 
+            # minsky91: to prevent QImageWriter throwing an exception at line 512 
+            # in image.py when saving ultra hires image result (> 12x12K), 
             # use medium-quality jpeg format instead of the default webp
             compr_format = None
             for img in job.results:
-                if (max(img.width, img.height) >= settings.jpeg_res_threshold * 1024): 
+                if max(img.width, img.height) >= 8 * 1024: 
                     compr_format = ImageFileFormat.jpeg
             if compr_format is not None:
                 image_data, image_offsets = job.results.to_bytes(format=compr_format)
