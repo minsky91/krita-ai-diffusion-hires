@@ -72,7 +72,7 @@ For instructions on removing cappings on image resolution in the plugin and Comf
 
 
 
-Example of metadata saved in a file, full verbosity mode:
+### Example of metadata saved in a file, full verbosity mode:
 
 a serene landscape with forest and mountains on the horizon, a  colored illustration  
 Negative prompt:   
