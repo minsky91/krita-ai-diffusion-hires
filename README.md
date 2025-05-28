@@ -66,9 +66,9 @@ _**to_baseline.bat**_
 `ren "C:\AI\StabilityMatrix\Packages\ComfyUI\custom_nodes\comfyui-tooling-nodes" "comfyui-tooling-nodes_hires"`  
 `ren "C:\AI\StabilityMatrix\Packages\ComfyUI\custom_nodes\comfyui-tooling-nodes_baseline" "comfyui-tooling-nodes"`  
 
-6. Run to_hires.bat to activate the Hires version (alternatively, to switch to the standard version when the Hires version is active, run to_baseline.bat) and _restart both) the Comfy server and Krita. To check if the switch did what was intended, check the version indicator in the Configure Image Diffusion / Plugin tab. 
+6. Run to_hires.bat to activate the Hires version (alternatively, run to_baseline.bat to switch to the standard version when the Hires version is active) and _restart both_ the Comfy server and Krita. To check if the switch did what was intended, check the version indicator in the Configure Image Diffusion / Plugin tab. 
 
-For instructions on removing cappings on image resolution in the plugin and Comfy server, click [here](https://github.com/minsky91/krita-ai-diffusion/wiki/6.-How-to-remove-size-cappings-on-high-resolution-images-in-ComfyUI-and-Krita-AI).
+For instructions on removing cappings on image resolution in the plugin and Comfy server, click [here](https://github.com/minsky91/krita-ai-diffusion/wiki/6.-How-to-remove-size-cappings-on-high-resolution-images-in-ComfyUI-and-Krita-AI). That will allow you to process files of resolutions as high as 24K - _if_ your GPU hardware is up to the task, naturally. 
 
 
 
