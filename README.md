@@ -14,7 +14,7 @@ Among the new features implemented in this edition (see the Hires tab screenshot
 
 **Hiresfix Guidance**, to customize the plugin’s built-in Hiresfix functionality;
 
-new, **optimized image upload and download** methods, speeding up 3 times sending of 4K PNG images of 4K size to the server, and 5 times of 8K size, while for receiving large generated images, registered speedups were 10 times for 4K and 24 times for 8K (with much higher speedups for 12K and beyond) (*); 
+new, **optimized image upload and download** methods, 3 times speeding up sending input PNG images of 4K size and 5 times of 8K size, 10 times for receiving of 4K images and 24 times of 8K (with much higher speedups for 12K and beyond) (*); 
 
 support for receiving and saving hires images in **JPEG format**;
 
