@@ -89,7 +89,7 @@ LoRas: LCM-Hyper\Hyper-SDXL-12steps-CFG-lora.safetensors: strength 1.0
 Rescale CFG: 0.7  
 Canvas resolution: 8192x6144 pixels  
 Output resolution: 8192x6144 pixels  
-Region 1: prompt <background>  
+Region 1: prompt {background}  
 Region 2: prompt "a forest hut", resolution 3108x2696  
 Region 3: prompt "a mountain river", resolution 3851x2856  
 Region 4: prompt "a forest meadow", resolution 5207x1473  
