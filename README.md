@@ -4,9 +4,9 @@ You might be interested in this version if you:
  
 * want to work with large canvas in Krita AI but are put off by slow processing speed or distortions/artefacts in the output, or  
 * need to upscale your works to commercial-grade print sizes (like, 12K and up), or  
-* have a beefy GPU (12-16 GB VRAM) and want to use it at its fullest with this tool, or  
+* have a beefy GPU (12-16 GB VRAM) and want to use it to its fullest with this tool, or  
 * are eager to see the famous Tiled Diffusion implemented in the plugin, or  
-* wish for more control over the hires generation process and its logistics. 
+* wish for more control over hires generation process and its logistics. 
 
 Among the new features implemented in this edition (see the Hires tab screenshot below) are: 
 
