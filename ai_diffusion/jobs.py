@@ -439,6 +439,9 @@ class JobQueue(QObject):
     selection_changed = pyqtSignal()
     job_finished = pyqtSignal(Job)
     job_discarded = pyqtSignal(Job)
+    # minsky91: added a separate signal to update doc annotations 
+    jobs_discarded_all = pyqtSignal(Job)
+    # end of minsky91 additions
     result_used = pyqtSignal(Item)
     result_discarded = pyqtSignal(Item)
 
@@ -546,6 +549,10 @@ class JobQueue(QObject):
         ]
         for job in jobs_to_discard:
             self._discard_job(job)
+        # minsky91: added a separate signal to update doc annotations 
+        # this radically shortens clear history time when the history is really large
+        self.jobs_discarded_all.emit(job)
+        # end of minsky91 additions
 
     def any_executing(self):
         return any(j.state is JobState.executing for j in self._entries)

@@ -181,7 +181,10 @@ class ModelSync:
                 results = ImageCollection.from_bytes(images_bytes, item.offsets)
                 model.jobs.set_results(job, results)
                 model.jobs.notify_finished(job)
-                self._history.append(item)
+                # minsky91: disabled cumulative appending of history items across Krita session
+                # that caused progressive slowdown of parts of the plugin's UI when the history becomes really large
+                # self._history.append(item)
+                # end of minsky91 modifications
                 self._memory_used[item.slot] = images_bytes.size()
                 self._slot_index = max(self._slot_index, item.slot + 1)
 
@@ -194,6 +197,9 @@ class ModelSync:
         model.custom.modified.connect(self._save)
         model.jobs.job_finished.connect(self._save_results)
         model.jobs.job_discarded.connect(self._remove_results)
+        # minsky91: added a separate signal to update doc annotations 
+        model.jobs.jobs_discarded_all.connect(self._save)
+        # end of minsky91 additions
         model.jobs.result_discarded.connect(self._remove_image)
         model.jobs.result_used.connect(self._save)
         model.jobs.selection_changed.connect(self._save)
@@ -216,7 +222,10 @@ class ModelSync:
     def _track_regions(self, root_region: RootRegion):
         root_region.added.connect(self._track_region)
         root_region.removed.connect(self._save)
-        root_region.modified.connect(self._save)
+        # minsky91: disabled perpetual tracking of the root region update that caused progressive slowdown 
+        # of typing in the prompt widget coupled with hour-glassing when the history becomes really large
+        #root_region.modified.connect(self._save)
+        # end of minsky91 modifications
         self._track_control_layers(root_region.control)
         for region in root_region:
             self._track_region(region)
@@ -251,7 +260,10 @@ class ModelSync:
             item = self._history.pop(index)
             self._model.document.remove_annotation(f"result{item.slot}.webp")
             self._memory_used.pop(item.slot, None)
-        self._save()
+        # minsky91: disabled saving of the whole doc annotation set for each job removed
+        # that caused blocking of the whole UI and endless hour-glassing when the history is large
+        #self._save()   # what is really the wisdom of this when called for a single job of many??
+        # end of minsky91 modifications
 
     def _remove_image(self, item: JobQueue.Item):
         if history := next((h for h in self._history if h.id == item.job), None):
