@@ -2,10 +2,10 @@
 
 You might be interested in this version if you:
  
-* want to work with large canvas in Krita AI but are put off by slow processing speed or distortions/artefacts in the output  
-* need to upscale your works to commercial-grade print sizes (like, 12K and up)  
-* have a beefy GPU (12-16 GB VRAM) and want to use it at its fullest with this tool  
-* are eager to see the famous Tiled Diffusion implemented in the plugin  
+* want to work with large canvas in Krita AI but are put off by slow processing speed or distortions/artefacts in the output, or  
+* need to upscale your works to commercial-grade print sizes (like, 12K and up), or  
+* have a beefy GPU (12-16 GB VRAM) and want to use it at its fullest with this tool, or  
+* are eager to see the famous Tiled Diffusion implemented in the plugin, or  
 * wish for more control over the hires generation process and its logistics. 
 
 Among the new features implemented in this edition (see the Hires tab screenshot below) are: 
@@ -43,7 +43,7 @@ Note that the Hires version requires Krita AI setup with a [custom Comfy server]
 At the moment, there is no automatic installation or update routine like implemented for standard Krita AI, you’ll have to install the Hires version manually, and update it with new releases manually as well. Here are the steps:
 
 1. Download the zip with [**Krita AI Hires**](https://github.com/minsky91/krita-ai-diffusion) files from the github page using the green Code drop-down button.
-2. Extract the zip’s contents to a hard disk, rename the main folder to ai_diffusion_hires and move it to the folder tree under the folder where the standard plugin is installed (for Windows, that would be C:\Users\yourusername\AppData\Roaming\krita\pykrita\ai_diffusion), so that its location becomes C:\Users\yourusernamet\AppData\Roaming\krita\pykrita\ai_diffusion_hires.
+2. Extract the zip’s contents to a hard disk, rename the main folder to ai_diffusion_hires and move it to the folder tree under the folder where the standard plugin is installed (for Windows, that would be C:\Users\yourusername\AppData\Roaming\krita\pykrita\ai_diffusion), so that its location becomes C:\Users\yourusername\AppData\Roaming\krita\pykrita\ai_diffusion_hires.
 3. Download the zip with [**ComfyUi tooling nodes Hires**](https://github.com/minsky91/comfyui-tooling-nodes) files from the github page using the green Code drop-down button.
 4. Extract the zip’s contents to a hard disk, rename the main folder to comfyui-tooling-nodes_hires and move it to the ComfyUI folder tree under the folder where the standard ComfyUi tooling nodes are installed, similarly to 2. above.
 5. Create **2 simple batch files** (shell scripts in Linux) to switch between the two versions named to_hires.bat and to_baseline.bat and place them in the pykrita folder just above ai_diffusion. Here are batch files from my system, to be used as a template:
@@ -120,3 +120,22 @@ GPU device features:
 name: cuda:0 NVIDIA GeForce RTX 4070 Ti SUPER  
 vram_total: 16 GB  
 vram_free: 14.7 GB  
+
+
+## Some examples of images upscaled, refined and inpainted with Krita AI Hires
+
+3250x3900
+![The snow globe infinity 95% jpgq](https://github.com/user-attachments/assets/300f19bf-9e9a-4ffd-ba30-a2a89d0a80ac)
+
+3840x4608
+![Wrong Shoes](https://github.com/user-attachments/assets/6ef5fd69-32ba-4726-9232-58c7b8a1e909)
+
+4096x4864
+![Made in Europe 90% jq](https://github.com/user-attachments/assets/1e4b5b4d-1bff-49f1-afa9-271ce0a4595d)
+
+4000x4800
+![Kiss encore scene 1 Hires](https://github.com/user-attachments/assets/a4179694-8a7f-408c-9cfb-ff5faa264238)
+
+6528x7840
+![The alien artefact](https://github.com/user-attachments/assets/de214bbe-f135-4424-829f-213a354485d6)
+
