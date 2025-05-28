@@ -43,7 +43,7 @@ Note that the Hires version requires Krita AI setup with a [custom Comfy server]
 At the moment, there is no automatic installation or update routine like implemented for standard Krita AI, you’ll have to install the Hires version manually, and update it with new releases manually as well. Here are the steps:
 
 1. Download the zip with [**Krita AI Hires**](https://github.com/minsky91/krita-ai-diffusion) files from the github page using the green Code drop-down button.
-2. Extract the zip’s contents to a hard disk, rename the main folder to ai_diffusion_hires and move it to the folder tree under the folder where the standard plugin is installed (for Windows, that would be C:\Users\yourusernamet\AppData\Roaming\krita\pykrita\ai_diffusion), so that its location becomes C:\Users\yourusernamet\AppData\Roaming\krita\pykrita\ai_diffusion_hires.
+2. Extract the zip’s contents to a hard disk, rename the main folder to ai_diffusion_hires and move it to the folder tree under the folder where the standard plugin is installed (for Windows, that would be C:\Users\yourusername\AppData\Roaming\krita\pykrita\ai_diffusion), so that its location becomes C:\Users\yourusernamet\AppData\Roaming\krita\pykrita\ai_diffusion_hires.
 3. Download the zip with [**ComfyUi tooling nodes Hires**](https://github.com/minsky91/comfyui-tooling-nodes) files from the github page using the green Code drop-down button.
 4. Extract the zip’s contents to a hard disk, rename the main folder to comfyui-tooling-nodes_hires and move it to the ComfyUI folder tree under the folder where the standard ComfyUi tooling nodes are installed, similarly to 2. above.
 5. Create **2 simple batch files** (shell scripts in Linux) to switch between the two versions named to_hires.bat and to_baseline.bat and place them in the pykrita folder just above ai_diffusion. Here are batch files from my system, to be used as a template:
@@ -66,7 +66,7 @@ _**to_baseline.bat**_
 `ren "C:\AI\StabilityMatrix\Packages\ComfyUI\custom_nodes\comfyui-tooling-nodes" "comfyui-tooling-nodes_hires"`  
 `ren "C:\AI\StabilityMatrix\Packages\ComfyUI\custom_nodes\comfyui-tooling-nodes_baseline" "comfyui-tooling-nodes"`  
 
-6. Run to_hires.bat to activate the Hires version (alternatively, to switch to the standard version when the Hires version is active, run to_baseline.bat) and restart both the Comfy server and Krita. To check if the switch did what was intended, check the version indicator in the Configure Image Diffusion / Plugin tab. 
+6. Run to_hires.bat to activate the Hires version (alternatively, to switch to the standard version when the Hires version is active, run to_baseline.bat) and _restart both) the Comfy server and Krita. To check if the switch did what was intended, check the version indicator in the Configure Image Diffusion / Plugin tab. 
 
 For instructions on removing cappings on image resolution in the plugin and Comfy server, click [here](https://github.com/minsky91/krita-ai-diffusion/wiki/6.-How-to-remove-size-cappings-on-high-resolution-images-in-ComfyUI-and-Krita-AI).
 
@@ -74,49 +74,49 @@ For instructions on removing cappings on image resolution in the plugin and Comf
 
 Example of metadata saved in a file, full verbosity mode:
 
-a serene landscape with forest and mountains on the horizon, a  colored illustration
+a serene landscape with forest and mountains on the horizon, a  colored illustration  
 Negative prompt:   
-Steps: 10
-Sampler: Euler a (Hyper)
-Schedule type: Normal
-CFG scale: 3.0
-Seed: 1105287894
-Model: art\dynavisionXLAllInOneStylized_releaseV0610Bakedvae.safetensors (SD XL)
-Denoising strength: 1.0
-Style Preset: Hyper with Lora
-Style Preset filename: style-5.json
-LoRas: LCM-Hyper\Hyper-SDXL-12steps-CFG-lora.safetensors: strength 1.0 
-Rescale CFG: 0.7
-Canvas resolution: 8192x6144 pixels
-Output resolution: 8192x6144 pixels
-Region 1: prompt <background>
-Region 2: prompt <a forest hut>, resolution 3108x2696
-Region 3: prompt <a mountain river>, resolution 3851x2856
-Region 4: prompt <a forest meadow >, resolution 5207x1473
-Region 5: prompt <an elderly forester man is walking to his forest hut, carrying a heavy bundle of woodsticks on his back>, resolution 1656x2680
-Models used: xinsirtile-sdxl-1.0.safetensors (ControlNet)
-               4x_NMKD-Superscale-SP_178000_G.pth (Upscale or Inpaint model)
+Steps: 10  
+Sampler: Euler a (Hyper)  
+Schedule type: Normal  
+CFG scale: 3.0  
+Seed: 1105287894  
+Model: art\dynavisionXLAllInOneStylized_releaseV0610Bakedvae.safetensors (SD XL)  
+Denoising strength: 1.0  
+Style Preset: Hyper with Lora  
+Style Preset filename: style-5.json  
+LoRas: LCM-Hyper\Hyper-SDXL-12steps-CFG-lora.safetensors: strength 1.0  
+Rescale CFG: 0.7  
+Canvas resolution: 8192x6144 pixels  
+Output resolution: 8192x6144 pixels  
+Region 1: prompt <background>  
+Region 2: prompt <a forest hut>, resolution 3108x2696  
+Region 3: prompt <a mountain river>, resolution 3851x2856  
+Region 4: prompt <a forest meadow >, resolution 5207x1473  
+Region 5: prompt <an elderly forester man is walking to his forest hut, carrying a heavy bundle of woodsticks on his back>, resolution 1656x2680  
+Models used: xinsirtile-sdxl-1.0.safetensors (ControlNet)  
+               4x_NMKD-Superscale-SP_178000_G.pth (Upscale or Inpaint model)  
 
-Generation stats:
-6 cached input image(s) of 0x0 pixels
-Preparation time: 3.91 sec.
-Workflow size: 0.05 MB, 59 nodes
-Workflow upload time: 0.14 sec.
-Output files total size: 53.43 MB in 1 PNG image(s) of 8192x6144 pixels
-Output files download time: 3.28 sec.
-Execution time: 164.7 sec.
-Total active time: 168.6 sec.
-Total lifetime: 353.2 sec.
-Batch size: 3
+Generation stats:  
+6 cached input image(s) of 0x0 pixels  
+Preparation time: 3.91 sec.  
+Workflow size: 0.05 MB, 59 nodes  
+Workflow upload time: 0.14 sec.  
+Output files total size: 53.43 MB in 1 PNG image(s) of 8192x6144 pixels  
+Output files download time: 3.28 sec.  
+Execution time: 164.7 sec.  
+Total active time: 168.6 sec.  
+Total lifetime: 353.2 sec.  
+Batch size: 3  
 
-System info:
-os: nt
-ram_total: 32 GB
-ram_free: 23.1 GB
-comfyui_version: 0.3.19
-python_version: 3.10.11 
-pytorch_version: 2.6.0+cu124
-GPU device features:
-name: cuda:0 NVIDIA GeForce RTX 4070 Ti SUPER
-vram_total: 16 GB
-vram_free: 14.7 GB
+System info:  
+os: nt  
+ram_total: 32 GB  
+ram_free: 23.1 GB  
+comfyui_version: 0.3.19  
+python_version: 3.10.11  
+pytorch_version: 2.6.0+cu124  
+GPU device features:  
+name: cuda:0 NVIDIA GeForce RTX 4070 Ti SUPER  
+vram_total: 16 GB  
+vram_free: 14.7 GB  
