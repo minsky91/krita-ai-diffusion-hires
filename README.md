@@ -46,7 +46,7 @@ At the moment, there is no automatic installation or update routine like impleme
 2. Extract the zip’s contents to a hard disk, rename the main folder to ai_diffusion_hires and move it to the folder tree under the folder where the standard plugin is installed (for Windows, that would be C:\Users\yourusername\AppData\Roaming\krita\pykrita\ai_diffusion), so that its location becomes C:\Users\yourusername\AppData\Roaming\krita\pykrita\ai_diffusion_hires.
 3. Download the zip with [**ComfyUi tooling nodes Hires**](https://github.com/minsky91/comfyui-tooling-nodes) files from the github page using the green Code drop-down button.
 4. Extract the zip’s contents to a hard disk, rename the main folder to comfyui-tooling-nodes_hires and move it to the ComfyUI folder tree under the folder where the standard ComfyUi tooling nodes are installed, similarly to 2. above.
-5. Create **2 simple batch files** (shell scripts in Linux) to switch between the two versions named to_hires.bat and to_baseline.bat and place them in the pykrita folder just above ai_diffusion. Here are batch files from my system, to be used as a template:
+5. Create **2 simple batch files** (shell scripts in Linux) to switch between the two versions named to_hires.bat and to_baseline.bat and place them in the pykrita folder just above ai_diffusion. Here are the batch files from my system, to be used as a template:
 
 _**to_hires.bat**_  
 `ren ai_diffusion.desktop ai_diffusion.desktop_baseline`  
@@ -90,10 +90,10 @@ Rescale CFG: 0.7
 Canvas resolution: 8192x6144 pixels  
 Output resolution: 8192x6144 pixels  
 Region 1: prompt <background>  
-Region 2: prompt <a forest hut>, resolution 3108x2696  
-Region 3: prompt <a mountain river>, resolution 3851x2856  
-Region 4: prompt <a forest meadow >, resolution 5207x1473  
-Region 5: prompt <an elderly forester man is walking to his forest hut, carrying a heavy bundle of woodsticks on his back>, resolution 1656x2680  
+Region 2: prompt "a forest hut", resolution 3108x2696  
+Region 3: prompt "a mountain river", resolution 3851x2856  
+Region 4: prompt "a forest meadow", resolution 5207x1473  
+Region 5: prompt "an elderly forester man is walking to his forest hut, carrying a heavy bundle of woodsticks on his back", resolution 1656x2680  
 Models used: xinsirtile-sdxl-1.0.safetensors (ControlNet)  
                4x_NMKD-Superscale-SP_178000_G.pth (Upscale or Inpaint model)  
 
