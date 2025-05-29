@@ -8,13 +8,13 @@ You might be interested in this version if you:
 * are eager to see the famous Tiled Diffusion implemented in the plugin, or  
 * wish for more control over hires generation process and its logistics. 
 
-Among the new features implemented in this edition (see the Hires tab screenshot below) are: 
+Among new features implemented in this edition (see the Hires tab screenshot below) are: 
 
 [**Tiled Diffusion**](https://github.com/shiimizu/ComfyUI-TiledDiffusion) and accompanying it Tiled VAE Encode & Decode components, which together allow to speed up processing 1.5 - 2 times for 4K images, 2.2 times for 6K images, and up to 21 times, for 8K images, as compared to the standard (non-tiled) Generate / Refine option (*);   
 
 **Hiresfix Guidance**, to customize the plugin’s built-in Hiresfix functionality;
 
-new, **optimized image upload and download** methods, 3 times speeding up sending input PNG images of 4K size and 5 times of 8K size, 10 times for receiving of 4K images and 24 times of 8K (with much higher speedups for 12K and beyond) (*); 
+new, **optimized image upload and download**  methods, speeding up upload of input PNG images: 3 times for 4K size and 5 times for 8K size, and for receiving generated PNG images: 10 times for 4K size and 24 times for 8K (with much higher speedups for 12K and beyond) (*); 
 
 support for receiving and saving hires images in **JPEG format**;
 
@@ -22,7 +22,7 @@ support for receiving and saving hires images in **JPEG format**;
 
 generation **Progress Preview**;
 
-and a number of other **QoL improvements** & fixes, including a [fix](https://github.com/minsky91/krita-ai-diffusion/wiki/5.-Hiresfix-Guidance:-a-few-examples#fixing-hiresfix-for-flux) for the infamous **Flux screen pattern artifact** for resolutions higher than the checkpoint’s native.
+and a number of various **QoL improvements** & fixes, including a [fix](https://github.com/minsky91/krita-ai-diffusion/wiki/5.-Hiresfix-Guidance:-a-few-examples#fixing-hiresfix-for-flux) for the infamous **Flux screen pattern artifact** for resolutions higher than the checkpoint’s native.
 
 ![Krita AI Hires tab options](https://github.com/user-attachments/assets/7d52bee7-af51-4c75-9d48-f8c570e8b38d)
 
