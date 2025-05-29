@@ -10,7 +10,7 @@ You might be interested in this version if you:
 
 Among new features implemented in this edition (see the Hires tab screenshot below) are: 
 
-[**Tiled Diffusion**](https://github.com/shiimizu/ComfyUI-TiledDiffusion) and accompanying it Tiled VAE Encode & Decode components, which together allow to speed up processing 1.5 - 2 times for 4K images, 2.2 times for 6K images, and up to 21 times, for 8K images, as compared to the standard (non-tiled) Generate / Refine option (*);   
+[**Tiled Diffusion**](https://github.com/shiimizu/ComfyUI-TiledDiffusion) and accompanying it Tiled VAE Encode & Decode components, which together allow to speed up processing 1.5 - 2 times for 4K images, 2.2 times for 6K images, and up to 21 times, for 8K images, as compared to the standard (non-tiled) Generate / Refine option - with no discernible loss of quality (*);   
 
 **Hiresfix Guidance**, to customize the plugin’s built-in Hiresfix functionality;
 
