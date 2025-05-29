@@ -40,13 +40,14 @@ Note that the Hires version requires Krita AI setup with a [custom Comfy server]
 
 # Krita AI Hires installation 
 
-At the moment, there is no automatic installation or update routine like implemented for standard Krita AI, you’ll have to install the Hires version manually, and update it with new releases manually as well. Here are the steps:
+At the moment, there is no automatic installation or update routine like implemented for standard Krita AI, you’ll have to install the Hires version manually, and update it with new releases manually as well. The procedure assumes that you already have a working install of the standard Krita AI plugin on your system. Here are the steps:
 
-1. Download the zip with [**Krita AI Hires**](https://github.com/minsky91/krita-ai-diffusion) files from the github page using the green Code drop-down button.
-2. Extract the zip’s contents to a hard disk, rename the main folder to ai_diffusion_hires and move it to the folder tree under the folder where the standard plugin is installed (for Windows, that would be C:\Users\yourusername\AppData\Roaming\krita\pykrita\ai_diffusion), so that its location becomes C:\Users\yourusername\AppData\Roaming\krita\pykrita\ai_diffusion_hires.
-3. Download the zip with [**ComfyUi tooling nodes Hires**](https://github.com/minsky91/comfyui-tooling-nodes) files from the github page using the green Code drop-down button.
-4. Extract the zip’s contents to a hard disk, rename the main folder to comfyui-tooling-nodes_hires and move it to the ComfyUI folder tree under the folder where the standard ComfyUi tooling nodes are installed, similarly to 2. above.
-5. Create **2 simple batch files** (shell scripts in Linux) to switch between the two versions named to_hires.bat and to_baseline.bat and place them in the pykrita folder just above ai_diffusion. Here are the batch files from my system, to be used as a template:
+1. Using ComfyUI Manager, install Tiled Diffusion, Tiled VAE Encode & Decode nodes.
+2. Download the zip with [**Krita AI Hires**](https://github.com/minsky91/krita-ai-diffusion) files from the github page using the green Code drop-down button.
+3. Extract the zip’s contents to a hard disk, rename the main folder to ai_diffusion_hires and move it to the folder tree under the folder where the standard plugin is installed (for Windows, that would be C:\Users\yourusername\AppData\Roaming\krita\pykrita\ai_diffusion), so that its location becomes C:\Users\yourusername\AppData\Roaming\krita\pykrita\ai_diffusion_hires.
+4. Download the zip with [**ComfyUi tooling nodes Hires**](https://github.com/minsky91/comfyui-tooling-nodes) files from the github page using the green Code drop-down button.
+5. Extract the zip’s contents to a hard disk, rename the main folder to comfyui-tooling-nodes_hires and move it to the ComfyUI folder tree under the folder where the standard ComfyUi tooling nodes are installed, similarly to 2. above.
+6. Create **2 simple batch files** (shell scripts in Linux) to switch between the two versions named to_hires.bat and to_baseline.bat and place them in the pykrita folder just above ai_diffusion. Here are the batch files from my system, to be used as a template:
 
 _**to_hires.bat**_  
 `ren ai_diffusion.desktop ai_diffusion.desktop_baseline`  
