@@ -29,18 +29,18 @@ and a number of various **QoL improvements** & fixes, including a [fix](https://
  
 This release (a github fork from [Krita AI Diffusion](https://github.com/Acly/krita-ai-diffusion) by Acly) is a product of my extensive 1.5 year-long acquaintance with this amazing tool and, a bit later, with its sources. I find it an unparalleled work in the whole Stable Diffusion field and I wish we had more of such tools to cover various use cases. 
 
-As I discovered rather soon, one thing that the plugin doesn’t do well is high resolution image processing in the regular Generate/Refine workspace. At resolutions from 2K and up, the output becomes more and more plagued with distortions and artefacts, and from 4-6K, processing times grow prohibitive. For the Upscale / Refine workspace that employs a (proprietary) tiled method, things look much better in the hires department, but the Refine functionality is limited and tile seam artifacts in the output are pretty 
+As I discovered rather soon, one thing that the plugin doesn’t do well is high resolution image processing in the regular Generate/Refine workspace. At resolutions from 2K and up, the output becomes more and more plagued with distortions and artifacts, and from 4-6K, processing times grow prohibitive. For the Upscale / Refine workspace that employs a (proprietary) tiled method, things look much better in the hires department, but the Refine functionality is limited and tile seam artifacts in the output are pretty 
 ubiquitous. Many other issues arise when using large images of increasingly higher resolutions in Krita AI (although some of them can be blamed on Comfy and its Python library components), and by image sizes approaching 10x10K, it’s no longer usable. (Hence the plugin’s explicit 99 MP capping on the image pixel size, apparently.)
 
 Long story short, after a few months’ work, I succeeded in implementing most of the ideas I had for Krita AI Hires to improve the plugin’s work with large and ultra-large images, ending up at **24K** as the current size limit. I hope you will enjoy using this version just as I do. Full description of the new features can be found on the project’s [wiki pages](https://github.com/minsky91/krita-ai-diffusion/wiki/1.-Krita-AI-Hires-tab-options). 
 
-Note that the Hires version requires Krita AI setup with a [custom Comfy server](https://docs.interstice.cloud/comfyui-setup/). 
+Note that the Hires version requires Krita AI setup with a [custom Comfy server](https://docs.interstice.cloud/comfyui-setup/). As of the moment of writing, the Hires version includes all functionality of the standard v1.34 of the plugin.
 
 (*) an extensive benchmarking study that supports these claims can be found [here](https://github.com/minsky91/krita-ai-diffusion/wiki/2.-Upscaling-and-refining-from-1K-to-24K-with-Krita-AI-Hires).
 
 # Krita AI Hires installation 
 
-At the moment, there is no automatic installation or update routine like implemented for standard Krita AI, you’ll have to install the Hires version manually, and update it with new releases manually as well. The procedure assumes that you already have a working install of the standard Krita AI plugin on your system. Here are the steps:
+At the moment, there is no automatic installation or update routine like implemented for standard Krita AI, you’ll have to install the Hires version manually, and later on, update it with new releases manually as well. The procedure assumes that you already have a working install of the standard Krita AI plugin on your system. Here are the steps:
 
 1. Using ComfyUI Manager, install Tiled Diffusion, Tiled VAE Encode & Decode nodes.
 2. Download the zip with [**Krita AI Hires**](https://github.com/minsky91/krita-ai-diffusion) files from the github page using the green Code drop-down button.
@@ -67,7 +67,7 @@ _**to_baseline.bat**_
 `ren "C:\AI\StabilityMatrix\Packages\ComfyUI\custom_nodes\comfyui-tooling-nodes" "comfyui-tooling-nodes_hires"`  
 `ren "C:\AI\StabilityMatrix\Packages\ComfyUI\custom_nodes\comfyui-tooling-nodes_baseline" "comfyui-tooling-nodes"`  
 
-6. Run to_hires.bat to activate the Hires version (alternatively, run to_baseline.bat to switch to the standard version when the Hires version is active) and _restart both_ the Comfy server and Krita. To check if the switch did what was intended, check the version indicator in the Configure Image Diffusion / Plugin tab. 
+6. Run to_hires.bat to activate the Hires version (alternatively, run to_baseline.bat to switch to the standard version when the Hires version is active) and _restart both_ the Comfy server and Krita. To check if the switch did what was intended, check the version indicator in the Configure Image Diffusion / Plugin tab, it should have ‘Hires’ in it. 
 
 For instructions on removing cappings on image resolution in the plugin and Comfy server, click [here](https://github.com/minsky91/krita-ai-diffusion/wiki/6.-How-to-remove-size-cappings-on-high-resolution-images-in-ComfyUI-and-Krita-AI). That will allow you to process files of resolutions as high as 24K - _if_ your GPU hardware is up to the task, naturally. 
 
