@@ -25,3 +25,12 @@ venv
 bin
 lib
 pyvenv.cfg
+ai_diffusion/styles/anime-noobai-xl.json
+ai_diffusion/styles/cinematic-photo-xl.json
+ai_diffusion/styles/cinematic-photo.json
+ai_diffusion/styles/comic-anime.json
+ai_diffusion/styles/digital-artwork-xl.json
+ai_diffusion/styles/digital-artwork.json
+ai_diffusion/styles/flux-schnell.json
+ai_diffusion/styles/flux.json
+Krita AI project 01.06.tws

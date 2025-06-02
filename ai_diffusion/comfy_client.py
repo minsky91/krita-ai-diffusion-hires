@@ -1162,7 +1162,7 @@ class ComfyClient(Client):
             # minsky91: setting-based extended log info
             if not log_issued:
                 log.info(f"Uploading lora models to {self.url}")
-                log_issued = true
+                log_issued = True
             try:
                 assert file.path is not None
                 url = f"{self.url}/api/etn/upload/loras/{file.id}"
