@@ -1,126 +1,140 @@
-<h1><img width="64px" src="ai_diffusion/icons/logo-128.png"> Generative AI <i>for Krita</i></h1>
+# Introducing Krita AI Hires R1.0 (preview), a high resolution version of the Krita AI Diffusion plugin
 
-✨[Features](#features) | ⭳ [Download](https://github.com/Acly/krita-ai-diffusion/releases/latest) | 🛠️[Installation](https://docs.interstice.cloud/installation) | 🎞️ [Video](https://youtu.be/Ly6USRwTHe0) | 🖼️[Gallery](#gallery) | 📖[User Guide](https://docs.interstice.cloud) | 💬[Discussion](https://github.com/Acly/krita-ai-diffusion/discussions) | 🗣️[Discord](https://discord.gg/pWyzHfHHhU)
+You might be interested in this version if you:  
+ 
 
-This is a plugin to use generative AI in image painting and editing workflows
-from within Krita. Visit
-[**www.interstice.cloud**](https://www.interstice.cloud) for an introduction. Learn how to install and use it on [**docs.interstice.cloud**](https://docs.interstice.cloud).
+- want to work with large canvas in Krita AI but are put off by slow processing speed or distortions/artefacts in the output, or   
+- need to upscale your works to commercial-grade print sizes (like, 12K and up), or   
+- have a beefy GPU (12-16 GB VRAM) and want to use it at its fullest with this tool, or  
+- are eager to see the famous Tiled Diffusion implemented in the plugin, or  
+- wish for more control over the hires generation process and its logistics.
 
-The main goals of this project are:
-* **Precision and Control.** Creating entire images from text can be unpredictable.
-  To get the result you envision, you can restrict generation to selections,
-  refine existing content with a variable degree of strength, focus text on image
-  regions, and guide generation with reference images, sketches, line art,
-  depth maps, and more.
-* **Workflow Integration.** Most image generation tools focus heavily on AI parameters.
-  This project aims to be an unobtrusive tool that integrates and synergizes
-  with image editing workflows in Krita. Draw, paint, edit and generate seamlessly without worrying about resolution and technical details.
-* **Local, Open, Free.** We are committed to open source models. Customize presets, bring your
-  own models, and run everything local on your hardware. Cloud generation is also available
-  to get started quickly without heavy investment.  
+Among new features implemented in this edition (see the Hires tab screenshot below) are: 
 
-[![Watch video demo](media/screenshot-video-preview.webp)](https://youtu.be/Ly6USRwTHe0 "Watch video demo")
+[**Tiled Diffusion**](https://github.com/shiimizu/ComfyUI-TiledDiffusion) and accompanying it Tiled VAE Encode & Decode components, which together allow to speed up processing 1.5 \- 2 times for 4K images, 2.2 times for 6K images, and up to 21 times, for 8K images, as compared to the standard (non-tiled) Generate / Refine option \- with no discernible loss of quality **(\*)**;   
 
-## <a name="features"></a> Features
+**Hiresfix Guidance**, to customize the plugin’s built-in Hiresfix functionality;
 
-* **Inpainting**: Use selections for generative fill, expand, to add or remove objects
-* **Live Painting**: Let AI interpret your canvas in real time for immediate feedback. [Watch Video](https://youtu.be/AF2VyqSApjA?si=Ve5uQJWcNOATtABU)
-* **Upscaling**: Upscale and enrich images to 4k, 8k and beyond without running out of memory.
-* **Diffusion Models**: Supports Stable Diffusion 1.5, and XL. Partial support for [Flux](https://github.com/Acly/krita-ai-diffusion/discussions/1176) and SD3.
-* **ControlNet**: Scribble, Line art, Canny edge, Pose, Depth, Normals, Segmentation, +more
-* **IP-Adapter**: Reference images, Style and composition transfer, Face swap
-* **Regions**: Assign individual text descriptions to image areas defined by layers.
-* **Job Queue**: Queue and cancel generation jobs while working on your image.
-* **History**: Preview results and browse previous generations and prompts at any time.
-* **Strong Defaults**: Versatile default style presets allow for a streamlined UI.
-* **Customization**: Create your own presets - custom checkpoints, LoRA, samplers and more.
+new, **optimized image upload and download** methods, speeding up upload of input PNG images: 3 times for 4K size and 5 times for 8K size, and for receiving generated PNG images: 10 times for 4K size and 24 times for 8K (with much higher speedups for 12K and beyond) **(\*)**; 
 
-## <a name="installation"></a> Getting Started
+support for receiving and saving hires images in **JPEG format**;
 
-See the [Plugin Installation Guide](https://docs.interstice.cloud/installation) for instructions.
+**saving full metadata and workflows in PNG images** (see example below) and alongside them;
 
-A concise (more technical) version is below:
+generation **Progress Preview**;
 
-### Operating System
+and a number of various **QoL improvements** & fixes, including a [**fix**](https://github.com/minsky91/krita-ai-diffusion/wiki/5.-Hiresfix-Guidance:-a-few-examples#fixing-hiresfix-for-flux) **for the infamous Flux screen pattern** artifact for resolutions higher than the checkpoint’s native.
 
-Windows, Linux, MacOS
+![Krita AI Hires tab options](https://github.com/user-attachments/assets/7c482251-b4b7-4b73-95c4-eab458f6b78a)
+ 
+This fork is a product of my extensive 1.5 year-long acquaintance with this amazing tool and, a bit later, with its sources. I find it an unparalleled work in the whole Stable Diffusion field and I wish we had more of such tools to cover various use cases. 
 
-#### Hardware support
+As I discovered rather soon, one thing that the plugin doesn’t do well is high resolution image processing in the regular Generate/Refine workspace. At resolutions from 2K and up, the output becomes more and more plagued with distortions and artifacts, and from 4-6K, processing times grow prohibitive. For the Upscale / Refine workspace that employs a (proprietary) tiled method, things look much better in the hires department, but the Refine functionality is limited and tile seam artifacts in the output are pretty ubiquitous. Many other issues arise when using large images of increasingly higher resolutions in Krita AI (although some of them can be blamed on Comfy and its Python library components), and by sizes approaching 10x10K, it’s no longer usable. (Hence the plugin’s explicit 99 MP capping on the image pixel size, apparently.)
 
-To run locally a powerful graphics card with at least 6 GB VRAM (NVIDIA) is
-recommended. Otherwise generating images will take very long or may fail due to
-insufficient memory!
+Long story short, after a few months’ work, I succeeded in implementing most of the ideas I had for Krita AI Hires to improve the plugin’s work with large and ultra-large images, ending up at **24K** as the current size limit. I hope you will enjoy using this version just as I do. Full description of the new features can be found on the project’s [wiki pages](https://github.com/minsky91/krita-ai-diffusion/wiki/1.-Krita-AI-Hires-tab-options). 
 
-<table>
-<tr><td>NVIDIA GPU</td><td>supported via CUDA (Windows/Linux)</td></tr>
-<tr><td>AMD GPU</td><td>DirectML (Windows, limited features, 12+ GB VRAM recommended)<br>ROCm (Linux, via custom ComfyUI)</td></tr>
-<tr><td>Apple Silicon</td><td>community support, MPS on macOS 14+</td></tr>
-<tr><td>CPU</td><td>supported, but very slow</td></tr>
-</table>
+Note that the Hires version requires Krita AI setup with a [custom Comfy server](https://docs.interstice.cloud/comfyui-setup/). The Hires version includes all functionality of the standard v1.34 of the plugin.
+
+**(\*)** an extensive benchmarking study that supports these claims can be found [here](https://github.com/minsky91/krita-ai-diffusion/wiki/2.-Upscaling-and-refining-from-1K-to-24K-with-Krita-AI-Hires).
+
+# Krita AI Hires installation 
+
+At the moment, there is no automatic installation or update routine like implemented for standard Krita AI, you’ll have to install the Hires version manually, and later on, update it with new releases manually as well. The procedure assumes that you already have a working install of the standard Krita AI plugin on your system. Here are the steps:
+
+1. Using ComfyUI Manager, install Tiled Diffusion, Tiled VAE Encode & Decode nodes.  
+2. Download the zip with **Krita AI Hires** files from the [github page](https://github.com/minsky91/krita-ai-diffusion) using the green Code drop-down button.  
+3. Extract the zip’s contents to a hard disk, rename the main folder to ai\_diffusion\_hires and move it to the folder tree under the folder where the standard plugin is installed (for Windows, that would be C:\\Users\\yourusernamet\\AppData\\Roaming\\krita\\pykrita\\ai\_diffusion), so that its location becomes C:\\Users\\yourusernamet\\AppData\\Roaming\\krita\\pykrita\\ai\_diffusion\_hires.  
+4. Download the zip with **ComfyUi tooling nodes Hires** files from the [github page](https://github.com/minsky91/comfyui-tooling-nodes) using the green Code drop-down button.  
+5. Extract the zip’s contents to a hard disk, rename the main folder to comfyui-tooling-nodes\_hires and move it to the ComfyUI folder tree under the folder where the standard ComfyUi tooling nodes are installed, similarly to 2\. above.  
+6. Create **2 simple batch files** (shell scripts in Linux) to switch between the two versions named to\_hires.bat and to\_baseline.bat and place them in the pykrita folder just above ai\_diffusion. Here are batch files from my system, to be used as a template:
+
+***to\_hires.bat***  
+`ren ai_diffusion.desktop ai_diffusion.desktop_baseline`  
+`ren ai_diffusion.desktop_hires ai_diffusion.desktop`  
+`ren ai_diffusion ai_diffusion_baseline`  
+`ren ai_diffusion_hires ai_diffusion`  
+
+`ren "C:\AI\StabilityMatrix\Packages\ComfyUI\custom_nodes\comfyui-tooling-nodes" "comfyui-tooling-nodes_baseline"`    
+`ren "C:\AI\StabilityMatrix\Packages\ComfyUI\custom_nodes\comfyui-tooling-nodes_hires" "comfyui-tooling-nodes"`  
+
+***to\_baseline.bat***  
+`ren ai_diffusion.desktop ai_diffusion.desktop_hires`  
+`ren ai_diffusion.desktop_baseline ai_diffusion.desktop`    
+`ren ai_diffusion ai_diffusion_hires`   
+`ren ai_diffusion_baseline ai_diffusion`
+
+`ren "C:\AI\StabilityMatrix\Packages\ComfyUI\custom_nodes\comfyui-tooling-nodes" "comfyui-tooling-nodes_hires"`  
+`ren "C:\AI\StabilityMatrix\Packages\ComfyUI\custom_nodes\comfyui-tooling-nodes_baseline" "comfyui-tooling-nodes"`
+
+7. In the pykrita folder, make a copy of ai\_diffusion.desktop with the extension ‘desktop\_hires’ and change line 7 to ’Name=AI Image Diffusion Hires’.  
+8. Run to\_hires.bat to activate the Hires version (alternatively, to switch to the standard version when the Hires version is active, run to\_baseline.bat) and *restart both* the Comfy server and Krita. To check if the switch did what was intended, check the version indicator in the Configure Image Diffusion / Plugin tab, it should have ‘Hires’ in it. 
+
+For instructions on removing cappings on image resolution in the plugin and Comfy server, [click here](https://github.com/minsky91/krita-ai-diffusion/wiki/6.-How-to-remove-size-cappings-on-high-resolution-images-in-ComfyUI-and-Krita-AI). That will allow you to process files of resolutions as high as 24K \- *if* your GPU hardware is up to the task, naturally.
+
+### Example of metadata saved in a file, full verbosity mode:
+
+`a serene landscape with forest and mountains on the horizon, a  colored illustration`  
+`Negative prompt:`     
+`Steps: 10`  
+`Sampler: Euler a (Hyper)`    
+`Schedule type: Normal`  
+`CFG scale: 3.0`  
+`Seed: 1105287894`    
+`Model: art\dynavisionXLAllInOneStylized_releaseV0610Bakedvae.safetensors (SD XL)`  
+`Denoising strength: 1.0`  
+`Style Preset: Hyper with Lora`    
+`Style Preset filename: style-5.json`    
+`LoRas: LCM-Hyper\Hyper-SDXL-12steps-CFG-lora.safetensors: strength 1.0`   
+`Rescale CFG: 0.7`  
+`Canvas resolution: 8192x6144 pixels`    
+`Output resolution: 8192x6144 pixels`    
+`Region 1: prompt <background>`  
+`Region 2: prompt <a forest hut>, resolution 3108x2696`  
+`Region 3: prompt <a mountain river>, resolution 3851x2856`  
+`Region 4: prompt <a forest meadow >, resolution 5207x1473`  
+`Region 5: prompt <an elderly forester man is walking to his forest hut, carrying a heavy bundle of woodsticks on his back>, resolution 1656x2680`  
+`Models used: xinsirtile-sdxl-1.0.safetensors (ControlNet)`  
+`               4x_NMKD-Superscale-SP_178000_G.pth (Upscale or Inpaint model)`
+
+`Generation stats:`  
+`6 cached input image(s) of 0x0 pixels`  
+`Preparation time: 3.91 sec.`  
+`Workflow size: 0.05 MB, 59 nodes`  
+`Workflow upload time: 0.14 sec.`  
+`Output files total size: 53.43 MB in 1 PNG image(s) of 8192x6144 pixels`  
+`Output files download time: 3.28 sec.`  
+`Execution time: 164.7 sec.`  
+`Total active time: 168.6 sec.`  
+`Total lifetime: 353.2 sec.`  
+`Batch size: 3`
+
+`System info:`  
+`os: nt`  
+`ram_total: 32 GB`  
+`ram_free: 23.1 GB`  
+`comfyui_version: 0.3.19`  
+`python_version: 3.10.11`   
+`pytorch_version: 2.6.0+cu124`  
+`GPU device features:`  
+`name: cuda:0 NVIDIA GeForce RTX 4070 Ti SUPER`  
+`vram_total: 16 GB`  
+`vram_free: 14.7 GB`
 
 
-### Installation
+# Examples of images upscaled, refined and inpainted with Krita AI Hires
 
-1. If you haven't yet, go and install [Krita](https://krita.org/)! _Required version: 5.2.0 or newer_
-1. [Download the plugin](https://github.com/Acly/krita-ai-diffusion/releases/latest).
-2. Start Krita and install the plugin via Tools ▸ Scripts ▸ Import Python Plugin from File...
-    * Point it to the ZIP archive you downloaded in the previous step.
-    * ⚠ _This will delete any previous install of the plugin._ If you are updating from 1.14 or older please read [updating to a new version](https://docs.interstice.cloud/common-issues#update-plugin).
-    * Check [Krita's official documentation](https://docs.krita.org/en/user_manual/python_scripting/install_custom_python_plugin.html) for more options.
-3. Restart Krita and create a new document or open an existing image.
-4. To show the plugin docker: Settings ‣ Dockers ‣ AI Image Generation.
-5. In the plugin docker, click "Configure" to start local server installation or connect.
+3250x3900
+![The snow globe infinity 95% jpgq](https://github.com/user-attachments/assets/b2fc4095-7dbb-45a5-88c8-c132c510120f)
 
-> [!NOTE]
-> If you encounter problems please check the [FAQ / list of common issues](https://docs.interstice.cloud/common-issues) for solutions.
->
-> Reach out via [discussions](https://github.com/Acly/krita-ai-diffusion/discussions), our [Discord](https://discord.gg/pWyzHfHHhU), or report [an issue here](https://github.com/Acly/krita-ai-diffusion/issues). Please note that official Krita channels are **not** the right place to seek help with
-> issues related to this extension!
+3840x4608
+![Wrong Shoes](https://github.com/user-attachments/assets/57a694d1-38df-4a43-a0d7-241512ed03a4)
 
-### _Optional:_ Custom ComfyUI Server
+4096x4864
+![Made in Europe 90% jq](https://github.com/user-attachments/assets/85f904cf-b0e0-4e26-b566-36ccece5ebe9)
 
-The plugin uses [ComfyUI](https://github.com/comfyanonymous/ComfyUI) as backend.
-As an alternative to the automatic installation, you can install it manually or
-use an existing installation. If the server is already running locally before
-starting Krita, the plugin will automatically try to connect. Using a remote
-server is also possible this way.
+4000x4800
+![Kiss encore scene 1 Hires](https://github.com/user-attachments/assets/9cda7369-7997-46df-ba14-c53121822a31)
 
-Please check the list of [required extensions and models](https://docs.interstice.cloud/comfyui-setup) to make sure your installation is compatible.
+6528x7840
+![The alien artefact](https://github.com/user-attachments/assets/b44df65e-5db7-4c4c-be81-ce59130ac354)
 
-### _Optional:_ Object selection tools (Segmentation)
-
-If you're looking for a way to easily select objects in the image, there is a [separate plugin](https://github.com/Acly/krita-ai-tools) which adds AI segmentation tools.
-
-
-## Contributing
-
-Contributions are very welcome! Check the [contributing guide](CONTRIBUTING.md) to get started.
-
-## <a name="gallery"></a> Gallery
-
-_Live painting with regions (Click for video)_
-[![Watch video demo](media/screenshot-regions.png)](https://youtu.be/PPxOE9YH57E "Watch video demo")
-
-_Inpainting on a photo using a realistic model_
-<img src="media/screenshot-2.png">
-
-_Reworking and adding content to an AI generated image_
-<img src="media/screenshot-1.png">
-
-_Adding detail and iteratively refining small parts of the image_
-<img src="media/screenshot-3.png">
-
-_Modifying the pose vector layer to control character stances (Click for video)_
-[![Watch video demo](media/screenshot-5.png)](https://youtu.be/-QDPEcVmdLI "Watch video demo")
-
-_Control layers: Scribble, Line art, Depth map, Pose_
-![Scribble control layer](media/control-scribble-screen.png)
-![Line art control layer](media/control-line-screen.png)
-![Depth map control layer](media/control-depth-screen.png)
-![Pose control layer](media/control-pose-screen.png)
-
-## Technology
-
-* Image generation: [Stable Diffusion](https://github.com/Stability-AI/generative-models), [Flux](https://blackforestlabs.ai/)
-* Diffusion backend: [ComfyUI](https://github.com/comfyanonymous/ComfyUI)
-* Inpainting: [ControlNet](https://github.com/lllyasviel/ControlNet), [IP-Adapter](https://github.com/tencent-ailab/IP-Adapter)

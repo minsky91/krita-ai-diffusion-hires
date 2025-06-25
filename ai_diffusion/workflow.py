@@ -271,7 +271,12 @@ class ImageOutput:
                 if self.is_mask:
                     self._scaled = w.scale_mask(result, reshape.target_extent)
                 else:
-                    self._scaled = w.scale_control_image(result, reshape.target_extent)
+                    # minsky91: avoid rescales that trigger Comfy errors
+                    if reshape.target_extent is not None and max(reshape.target_extent.width, reshape.target_extent.height) > 8192:
+                        self._scaled = w.scale_image(result, reshape.target_extent)
+                    else:
+                    # end of minsky91 additions
+                        self._scaled = w.scale_control_image(result, reshape.target_extent)
                 self._scale = reshape.target_extent
             result = self._scaled
 
