@@ -601,7 +601,8 @@ class PerformanceSettings(SettingsTab):
         advanced_layout.addWidget(self._batch_size)
 
         self._resolution_multiplier = SliderSetting(
-            Settings._resolution_multiplier, self._advanced, 0.3, 1.5, "{:.1f}x"
+            # minsky91: extended max Resolution multiplier value from 1.5 to 2.5
+            Settings._resolution_multiplier, self._advanced, 0.3, 2.5, "{:.1f}x"
         )
         self._resolution_multiplier.value_changed.connect(self.write)
         advanced_layout.addWidget(self._resolution_multiplier)
