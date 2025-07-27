@@ -23,6 +23,7 @@ from .style import StyleSettings, SamplerPresets
 from .settings import Verbosity
 from .util import flatten
 from textwrap import wrap
+from .image import multiple_of
 # end of minsky91 additions
 
 class JobState(Flag):
@@ -221,6 +222,13 @@ class JobParams:
             return None
     
     @property
+    def job_resolution_multiplier(self):
+        if self.metadata.get("resolution_multiplier"):
+            return self.metadata.get("resolution_multiplier", 1.0)
+        else:
+            return settings.resolution_multiplier
+
+    @property
     def input_resolution(self):
         if self.metadata.get("input_resolution"):
             return self.metadata.get("input_resolution", [0, 0])
@@ -327,6 +335,7 @@ class Job:
         job_loras = job.params.loras 
         if job_loras != "":
             collected_metadata.append("LoRas: " + job_loras)
+        res_mult = job.params.job_resolution_multiplier
         if is_verbose_or_medium:
             if job.params.vae != "":
                 collected_metadata.append("VAE: " + job.params.vae)
@@ -341,13 +350,22 @@ class Job:
                     collected_metadata.append("Rescale CFG: " + f"{job.params.rescale_cfg}")
             if job.params.sag is not None:
                 collected_metadata.append("Self-attention Guidance: " + f"{job.params.sag}")
+            collected_metadata.append("Resolution multiplier: " + f"{res_mult}")
         image_w, image_h = job.params.canvas_resolution
         if image_w != 0:
             collected_metadata.append("Canvas resolution: " + f"{image_w}x{image_h} pixels")
         image_w, image_h = job.params.input_resolution
         if is_verbose_or_medium:
             if image_w != 0:
-                collected_metadata.append("Input resolution: " + f"{image_w}x{image_h} pixels")
+                input_res_str = "Input resolution: "
+                eff__w = image_w*res_mult
+                eff__h = image_h*res_mult
+                if res_mult != 1.0:
+                    input_res_str = "Effective " + input_res_str
+                    eff__w = multiple_of(eff__w, 8)
+                    eff__h = multiple_of(eff__h, 8)
+                input_res_str += f"{int(eff__w)}x{int(eff__h)} pixels"
+                collected_metadata.append(input_res_str)
             image_w, image_h = job.params.output_resolution
             if image_w != 0:
                 collected_metadata.append("Output resolution: " + f"{image_w}x{image_h} pixels")

@@ -257,6 +257,7 @@ class Model(QObject, ObservableProperties):
         job_params.metadata["seed"] = self.seed
         if len(job_regions) == 1:
             job_params.metadata["prompt"] = job_params.name = job_regions[0].prompt
+        job_params.metadata["resolution_multiplier"] = self.resolution_multiplier
         if input.images.initial_image is not None:
             job_params.metadata["input_resolution"] = [input.images.initial_image.width, input.images.initial_image.height] 
         if input.images.hires_mask is not None:
