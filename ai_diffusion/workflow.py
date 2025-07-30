@@ -32,6 +32,19 @@ import uuid
 import random
 from .settings import Verbosity
 
+# user-controlled Hiresfix guidance around the default 0.4
+def adjust_hiresfix_denoise(do_tiled_diffusion: bool):
+    # map the guidance range to hiresfix denoise values
+    hiresfix_denoise_value = 0.4 - settings.hiresfix_guidance / 100.
+    # for TD at 0 guidance, use the optimal value of 0.2 to keep faint tiled hallucinations away
+    if do_tiled_diffusion:
+        if settings.hiresfix_guidance == 0:
+             hiresfix_denoise_value = 0.2
+        # on the very left, preserve a selected range of unblur-free high denoise values 
+        elif settings.hiresfix_guidance < -16:
+             hiresfix_denoise_value = 0.2 - (settings.hiresfix_guidance+16) / 10.0
+    return hiresfix_denoise_value
+
 def check_TD_plug(extent: Extent = None):
     do_engage_TD = settings.enable_TD and settings.server_mode is ServerMode.external
     if extent is not None:
@@ -802,21 +815,10 @@ def scale_refine_and_decode(
         latent = w.vae_encode_tiled(vae, upscale, 1024, 64, 64, 8)
     else:
         latent = w.vae_encode(vae, upscale)
-    # minsky91: user-controlled Hiresfix guidance around the default 0.4
     if settings.hiresfix_guidance != 0 or do_tiled_diffusion:
-        #if settings.fast_receive:
-        #   send_image_http(w, None, upscale)
-        # map the guidance range to hiresfix denoise values (TD or not TD)
+        # map the hiresfix guidance range to hiresfix denoise values (TD or not TD)
         # (for TD, assisted by additionally inserting a special unblur control)
-        hiresfix_denoise_value = 0.4 - settings.hiresfix_guidance / 100.
-        # for TD at 0 guidance, use the optimal value of 0.2 to keep faint tiled hallucinations away
-        if do_tiled_diffusion:
-            if settings.hiresfix_guidance == 0:
-                 hiresfix_denoise_value = 0.2
-            # on the very left, preserve a selected range of unblur-free high denoise values 
-            elif settings.hiresfix_guidance < -16:
-                 hiresfix_denoise_value = 0.2 - (settings.hiresfix_guidance+16) / 10.0  
-        params = _sampler_params(sampling, strength=hiresfix_denoise_value)
+        params = _sampler_params(sampling, strength=adjust_hiresfix_denoise(do_tiled_diffusion))
     else:    # end of minsky91 additions 
         params = _sampler_params(sampling, strength=0.4)
 
@@ -830,7 +832,7 @@ def scale_refine_and_decode(
         w, model, positive, negative, cond.all_control, extent.desired, vae, models
     )
 
-    # minsky81: user-controlled Hiresfix guidance
+    # minsky91: user-controlled Hiresfix guidance
     if settings.hiresfix_guidance != 0 and not models.arch is Arch.flux: 
         # insert an unblur control to tie with the just upscaled image, with a modulated effect
         if do_tiled_diffusion and settings.hiresfix_guidance >= -16 and settings.hiresfix_guidance <= 16:
@@ -1074,7 +1076,13 @@ def inpaint(
         upscale_mask = cropped_mask
         if crop_upscale_extent != target_bounds.extent:
             upscale_mask = w.scale_mask(cropped_mask, crop_upscale_extent)
-        sampler_params = _sampler_params(sampling, strength=0.4)
+        # minsk91: check if TD is applicable to the desired extent
+        do_tiled_diffusion = check_TD_plug(upscale_extent.desired) 
+        if settings.hiresfix_guidance != 0 or do_tiled_diffusion:
+            # map the hiresfix guidance range to hiresfix denoise values
+            sampler_params = _sampler_params(sampling, strength=adjust_hiresfix_denoise(do_tiled_diffusion))
+        else:    # end of minsky91 additions 
+            sampler_params = _sampler_params(sampling, strength=0.4)
         upscale_model = w.load_upscale_model(upscaler)
         # minsky91: use the dedciated tiled VAE decode to avoid VRAM-related slow-downs with TD
         if check_TD_plug(extent.initial):
@@ -1086,7 +1094,6 @@ def inpaint(
         upscale = w.upscale_image(upscale_model, upscale)
         upscale = w.scale_image(upscale, upscale_extent.desired)
         # minsky91: use the dedciated tiled VAE encode to avoid VRAM-related slow-downs with TD 
-        do_tiled_diffusion = check_TD_plug(upscale_extent.desired) 
         if do_tiled_diffusion:
             latent = w.vae_encode_tiled(vae, upscale, 1024, 64, 64, 8)
         else:
