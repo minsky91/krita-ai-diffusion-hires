@@ -596,15 +596,25 @@ class CustomInpaintWidget(QWidget):
     def update_fill_enabled(self):
         self.fill_mode_combo.setEnabled(self.model.strength == 1.0)
 
+    # minsky91: added logic to prevent Entire Image being auto-selected after 
+    # a context layer was deleted, making Automatic context the new fallback
     def update_context_layers(self):
+        # minsky91
+        reset_to_auto = False
         current = self.context_combo.currentData()
         with theme.SignalBlocker(self.context_combo):
             while self.context_combo.count() > 3:
+                # minsky91
+                reset_to_auto = True
                 self.context_combo.removeItem(self.context_combo.count() - 1)
             icon = theme.icon("context-layer")
             for layer in self._model.layers.masks:
                 self.context_combo.addItem(icon, f"{layer.name}", layer.id)
         current_index = self.context_combo.findData(current)
+        # minsky91
+        if reset_to_auto:
+            current_index = 0
+        # end of minsky91 additions
         if current_index >= 0:
             self.context_combo.setCurrentIndex(current_index)
 
