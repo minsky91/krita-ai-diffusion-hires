@@ -94,6 +94,8 @@ class JobParams:
         self.metadata["style_preset_name"] = style.name
         self.metadata["checkpoint"] = checkpoint
         self.metadata["loras"] = style.loras
+        self.metadata["style_prompt"] = style.style_prompt
+        self.metadata["style_negative_prompt"] = style.negative_prompt
         self.metadata["architecture"] = style.architecture.resolve(checkpoint)
         # minsky91: extended the collected metadata code
         #self.metadata["sampler"] = f"{style.sampler} ({style.sampler_steps} / {style.cfg_scale})"
@@ -155,6 +157,14 @@ class JobParams:
     @property
     def checkpoint(self):
         return self.metadata.get("checkpoint", "")
+
+    @property
+    def style_prompt(self):
+        return self.metadata.get("style_prompt", "")
+        
+    @property
+    def style_negative_prompt(self):
+        return self.metadata.get("style_negative_prompt", "")
         
     @property
     def architecture(self):
@@ -306,8 +316,11 @@ class Job:
 
     # minsky91: added extended job metadata stats & basic workflow
     
-    def get_stat_metadata(self, job: Job):
-        return "Generation stats:\n\n" + "\n".join(ml for ml in job.stat_metadata)
+    def get_stat_metadata(self, job: Job, verbosity_setting: Verbosity):
+        if verbosity_setting in [Verbosity.medium, Verbosity.verbose]:
+            return "Generation stats:\n\n" + "\n".join(ml for ml in job.stat_metadata)
+        else:
+            return "".join(ml for ml in job.stat_metadata)
 
     def get_workflow(self, job: Job):
         return job.imageless_workflow
@@ -321,6 +334,9 @@ class Job:
             collected_metadata.append(print_header)
         collected_metadata.append(job.params.prompt)
         collected_metadata.append("Negative prompt: " + job.params.negative_prompt + "  ")
+        if verbosity_setting in [Verbosity.medium, Verbosity.verbose]:
+            collected_metadata.append("Style prompt: " + job.params.style_prompt + "  ")
+            collected_metadata.append("Style negative prompt: " + job.params.style_negative_prompt + "  ")
         collected_metadata.append("Steps: " + f"{job.params.steps}")
         collected_metadata.append("Sampler: " + job.params.sampler)
         if len(job.params.scheduler) >= 2:
@@ -413,8 +429,9 @@ class Job:
             collected_metadata.append(model_str)
 
         if job.stat_metadata:
-            collected_metadata.append("")
-            collected_metadata.append("Generation stats:")
+            if verbosity_setting in [Verbosity.medium, Verbosity.verbose]:
+                collected_metadata.append("")
+                collected_metadata.append("Generation stats:")
             for meta_line in job.stat_metadata:
                 # lines in stat_metadata are indented to indicate their verbosity level
                 if len(meta_line) >= 4 and meta_line[:4] == "    ":
