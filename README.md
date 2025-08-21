@@ -43,7 +43,7 @@ At the moment, there is no automatic installation or update routine like impleme
 
 1. Using ComfyUI Manager, install Tiled Diffusion, Tiled VAE Encode & Decode nodes.  
 2. Download the zip with **Krita AI Hires** files from the [github page](https://github.com/minsky91/krita-ai-diffusion) using the green Code drop-down button.  
-3. Extract the zip’s contents to a hard disk, rename the main folder to ai\_diffusion\_hires and move it to the folder tree under the folder where the standard plugin is installed (for Windows, that would be C:\\Users\\yourusernamet\\AppData\\Roaming\\krita\\pykrita\\ai\_diffusion), so that its location becomes C:\\Users\\yourusernamet\\AppData\\Roaming\\krita\\pykrita\\ai\_diffusion\_hires.  
+3. Extract the zip’s contents to a hard disk, rename the main folder to ai\_diffusion\_hires and move it to the folder tree under the folder where the standard plugin is installed (for Windows, that would be C:\\Users\\yourusername\\AppData\\Roaming\\krita\\pykrita\\ai\_diffusion), so that its location becomes C:\\Users\\yourusername\\AppData\\Roaming\\krita\\pykrita\\ai\_diffusion\_hires.  
 4. Download the zip with **ComfyUi tooling nodes Hires** files from the [github page](https://github.com/minsky91/comfyui-tooling-nodes) using the green Code drop-down button.  
 5. Extract the zip’s contents to a hard disk, rename the main folder to comfyui-tooling-nodes\_hires and move it to the ComfyUI folder tree under the folder where the standard ComfyUi tooling nodes are installed, similarly to 2\. above.  
 6. Create **2 simple batch files** (shell scripts in Linux) to switch between the two versions named to\_hires.bat and to\_baseline.bat and place them in the pykrita folder just above ai\_diffusion. Here are batch files from my system, to be used as a template:
@@ -66,8 +66,9 @@ At the moment, there is no automatic installation or update routine like impleme
 `ren "C:\AI\StabilityMatrix\Packages\ComfyUI\custom_nodes\comfyui-tooling-nodes" "comfyui-tooling-nodes_hires"`  
 `ren "C:\AI\StabilityMatrix\Packages\ComfyUI\custom_nodes\comfyui-tooling-nodes_baseline" "comfyui-tooling-nodes"`
 
-7. In the pykrita folder, make a copy of ai\_diffusion.desktop with the extension ‘desktop\_hires’ and change line 7 to ’Name=AI Image Diffusion Hires’.  
-8. Run to\_hires.bat to activate the Hires version (alternatively, to switch to the standard version when the Hires version is active, run to\_baseline.bat) and *restart both* the Comfy server and Krita. To check if the switch did what was intended, check the version indicator in the Configure Image Diffusion / Plugin tab, it should have ‘Hires’ in it. 
+7. In the pykrita folder, make a copy of ai\_diffusion.desktop with the extension ‘desktop\_hires’ and change line 7 to ’Name=AI Image Diffusion Hires’. 
+8. In the pykrita\ai_diffusion folder, check if you have the websockets subfolder and it's non-empty (contains subfolders with .py files). If it's not there or empty, **copy** the websockets subfolder tree from the standard plugin's folder tree (this is due to a github idiosyncrasy, can't think of other ways to fix it).  
+9. Run to\_hires.bat to activate the Hires version (alternatively, to switch to the standard version when the Hires version is active, run to\_baseline.bat) and *restart both* the Comfy server and Krita. To check if the switch did what was intended, check the version indicator in the Configure Image Diffusion / Plugin tab, it should have ‘Hires’ in it. 
 
 For instructions on removing cappings on image resolution in the plugin and Comfy server, [click here](https://github.com/minsky91/krita-ai-diffusion/wiki/6.-How-to-remove-size-cappings-on-high-resolution-images-in-ComfyUI-and-Krita-AI). That will allow you to process files of resolutions as high as 24K \- *if* your GPU hardware is up to the task, naturally.
 
