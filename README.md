@@ -133,9 +133,11 @@ For instructions on removing cappings on image resolution in the plugin and Comf
 4096x4864
 ![Made in Europe 90% jq](https://github.com/user-attachments/assets/85f904cf-b0e0-4e26-b566-36ccece5ebe9)
 
-4000x4800
-![Kiss encore scene 1 Hires](https://github.com/user-attachments/assets/9cda7369-7997-46df-ba14-c53121822a31)
-
 6528x7840
 ![The alien artefact](https://github.com/user-attachments/assets/b44df65e-5db7-4c4c-be81-ce59130ac354)
+
+4000x4800, a scaled-down version (the master file is 10000x12000, 114 MP large, can't be uploaded to github)
+![Kiss encore scene 1 Hires](https://github.com/user-attachments/assets/9cda7369-7997-46df-ba14-c53121822a31)
+
+a 2875x1760 zoomed-in fragment from the master file:
 
