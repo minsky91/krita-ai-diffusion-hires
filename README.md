@@ -67,7 +67,7 @@ At the moment, there is no automatic installation or update routine like impleme
 `ren "C:\AI\StabilityMatrix\Packages\ComfyUI\custom_nodes\comfyui-tooling-nodes_baseline" "comfyui-tooling-nodes"`
 
 7. In the pykrita folder, make a copy of ai\_diffusion.desktop with the extension ‘desktop\_hires’ and change line 7 to ’Name=AI Image Diffusion Hires’. 
-8. In the pykrita\ai_diffusion folder, check if you have the websockets subfolder and it's non-empty (contains subfolders with .py files). If it's not there or empty, **copy** the websockets subfolder tree from the standard plugin's folder tree (this is due to a github idiosyncrasy, can't think of other ways to fix it).  
+8. In the pykrita\ai_diffusion folder, check if you have the websockets subfolder and it's non-empty (contains subfolders with .py files). If it's not there or empty, **copy** the websockets subfolder tree from the standard version's folder tree (this is due to a github idiosyncrasy, can't think of other ways to fix it).  
 9. Run to\_hires.bat to activate the Hires version (alternatively, to switch to the standard version when the Hires version is active, run to\_baseline.bat) and *restart both* the Comfy server and Krita. To check if the switch did what was intended, check the version indicator in the Configure Image Diffusion / Plugin tab, it should have ‘Hires’ in it. 
 
 For instructions on removing cappings on image resolution in the plugin and Comfy server, [click here](https://github.com/minsky91/krita-ai-diffusion/wiki/6.-How-to-remove-size-cappings-on-high-resolution-images-in-ComfyUI-and-Krita-AI). That will allow you to process files of resolutions as high as 24K \- *if* your GPU hardware is up to the task, naturally.
