@@ -334,9 +334,6 @@ class Job:
             collected_metadata.append(print_header)
         collected_metadata.append(job.params.prompt)
         collected_metadata.append("Negative prompt: " + job.params.negative_prompt + "  ")
-        if verbosity_setting in [Verbosity.medium, Verbosity.verbose]:
-            collected_metadata.append("Style prompt: " + job.params.style_prompt + "  ")
-            collected_metadata.append("Style negative prompt: " + job.params.style_negative_prompt + "  ")
         collected_metadata.append("Steps: " + f"{job.params.steps}")
         collected_metadata.append("Sampler: " + job.params.sampler)
         if len(job.params.scheduler) >= 2:
@@ -348,6 +345,9 @@ class Job:
         collected_metadata.append("Style Preset: " + job.params.style_preset_name)
         if is_verbose:
             collected_metadata.append("Style Preset filename: " + job.params.style)
+        if verbosity_setting in [Verbosity.medium, Verbosity.verbose]:
+            collected_metadata.append("Style prompt: " + job.params.style_prompt + "  ")
+            collected_metadata.append("Style negative prompt: " + job.params.style_negative_prompt + "  ")
         job_loras = job.params.loras 
         if job_loras != "":
             collected_metadata.append("LoRas: " + job_loras)
