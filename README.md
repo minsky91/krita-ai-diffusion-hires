@@ -140,4 +140,5 @@ For instructions on removing cappings on image resolution in the plugin and Comf
 ![Kiss encore scene 1 Hires](https://github.com/user-attachments/assets/9cda7369-7997-46df-ba14-c53121822a31)
 
 a 2875x1760 zoomed-in fragment from the master file:
+![Kiss encore fragment 2875x1760](https://github.com/user-attachments/assets/730ab235-b33b-4405-a972-35aa32b23915)
 
