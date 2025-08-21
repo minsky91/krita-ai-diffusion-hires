@@ -137,7 +137,8 @@ For instructions on removing cappings on image resolution in the plugin and Comf
 ![The alien artefact](https://github.com/user-attachments/assets/b44df65e-5db7-4c4c-be81-ce59130ac354)
 
 4000x4800, a scaled-down version (the master file is 10000x12000, 114 MP large, can't be uploaded to github)
-![Kiss encore scene 1 Hires](https://github.com/user-attachments/assets/9cda7369-7997-46df-ba14-c53121822a31)
+![Kiss encore](https://github.com/user-attachments/assets/fdded99c-1fe0-4a74-89f1-f80de44266e6)
+
 
 a 2875x1760 zoomed-in fragment from the master file:
 ![Kiss encore fragment 2875x1760](https://github.com/user-attachments/assets/730ab235-b33b-4405-a972-35aa32b23915)
