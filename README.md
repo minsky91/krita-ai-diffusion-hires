@@ -130,8 +130,8 @@ For instructions on removing cappings on image resolution in the plugin and Comf
 3840x4608
 ![Wrong Shoes](https://github.com/user-attachments/assets/57a694d1-38df-4a43-a0d7-241512ed03a4)
 
-4096x4864
-![Made in Europe 90% jq](https://github.com/user-attachments/assets/85f904cf-b0e0-4e26-b566-36ccece5ebe9)
+4096x4864, a scaled-down version (the master file is 8420x10000, 80 MP large, can't be uploaded to github)
+![Made in Europe v1 5 4096x4864](https://github.com/user-attachments/assets/360ef1c5-8583-4ffe-afd4-74652e071add)
 
 6528x7840
 ![The alien artefact](https://github.com/user-attachments/assets/b44df65e-5db7-4c4c-be81-ce59130ac354)
